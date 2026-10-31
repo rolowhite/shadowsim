@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shadow City Control Room</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="bar">
+  <h1>Shadow City · Simulation Control Room</h1>
+  <div class="meta" id="meta"><span class="muted">No run selected</span></div>
+  <div class="spacer"></div>
+  <button class="primary" id="openDesk" disabled>Open Investigation Desk</button>
+  <a class="btn" href="/runs">Runs &amp; comparison</a>
+</header>
+<main class="grid-control">
+  <section class="panel">
+    <h2>Run controls</h2>
+    <div class="row">
+      <button id="bStart" class="primary">Start</button>
+      <button id="bPause">Pause</button>
+      <button id="bResume">Resume</button>
+      <button id="bStep">Advance 1 round</button>
+      <button id="bReset" title="Start a fresh run with the same seed, settings and premise. The old run is kept.">Reset</button>
+    </div>
+    <label for="speed">Speed (rounds per second)</label>
+    <select id="speed"><option>1</option><option selected>5</option><option>20</option><option>100</option><option value="max">max</option></select>
+    <p class="err" id="err" role="alert"></p>
+    <details id="newRun" open>
+      <summary><b>New run (X factor)</b></summary>
+      <label for="seed">Seed</label><input id="seed" type="number" value="1" min="0">
+      <label for="premise">Premise (free text; shown only to agents allowed to see it; changes no mechanics)</label>
+      <textarea id="premise" rows="3" placeholder="e.g. A drought has strained food supplies for two years."></textarea>
+      <label for="pvis">Premise visibility</label>
+      <select id="pvis"><option value="operator">operator only (no agent sees it)</option><option value="public">public (all agents)</option><option value="state">State agents only</option></select>
+      <label for="over">Parameter overrides (one <span class="mono">path=value</span> per line; these are the mechanical X factor)</label>
+      <textarea id="over" rows="4" class="mono" placeholder="incidents.genuine_per_year=0.05&#10;dms.kill_probability=0.8&#10;ablation.trait_mirror=true"></textarea>
+      <label for="prov">Decision maker</label>
+      <select id="prov"><option value="fallback">Deterministic fallback (rule-based)</option><option value="auto">Auto: local LLM if reachable, else fallback</option><option value="ollama">Ollama (required)</option><option value="openai_compat">OpenAI-compatible server (required)</option></select>
+      <label for="model">Model</label><input id="model" placeholder="llama3.2:3b">
+      <p class="muted" id="modelStatus"></p>
+      <button id="bCreate" class="primary">Create run</button>
+    </details>
+  </section>
+
+  <section class="panel">
+    <h2>Society indicators <small>cohort-weighted, 0 to 1; click a name for what it measures</small></h2>
+    <div id="indicators" class="row" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 16px"></div>
+    <h2 style="margin-top:12px">Roster by tier</h2>
+    <div class="legend"><span class="badge b-fact">fact</span> role, traits (Int/Ana · Sec/Man · Cur/Greed), loyalty, fear, status and lifespan are engine records ·
+      <span class="badge b-infer">belief</span> chips are what that person believes about a case, from their own evidence, and may be wrong · secret flags (bribed, coerced, double agent) appear only in the audit view</div>
+    <div id="roster"></div>
+  </section>
+
+  <section class="panel timeline">
+    <h2>Live event timeline <small id="evCount"></small></h2>
+    <div class="filters" id="filters"></div>
+    <div class="list" id="timeline" aria-live="polite"></div>
+  </section>
+
+  <section class="panel omni full" id="auditPanel">
+    <h2><span class="omni-head">OMNISCIENT AUDIT VIEW: simulation ground truth</span> <small>No character can see this. It is for the operator only.</small>
+      <span class="spacer" style="flex:1"></span><button class="toggle-omni" id="auditToggle" aria-pressed="false">Show ground truth</button></h2>
+    <div id="audit" hidden></div>
+  </section>
+</main>
+<script src="/static/common.js"></script>
+<script src="/static/control.js"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shadow City Runs</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="bar"><h1>Shadow City · Saved runs and comparison</h1><div class="spacer"></div><a class="btn" href="/control">Control Room</a></header>
+<main>
+  <div class="panel">
+    <p class="muted" style="margin-top:0">Simulated outcomes under this model, not evidence about real societies. Group by config hash to compare conditions; each row keeps its settings, events, notes and model details (export from the Investigation Desk).</p>
+    <h2>Outcome counts by configuration</h2>
+    <div id="summary" class="scroll"></div>
+  </div>
+  <div class="panel">
+    <h2>All runs</h2>
+    <div id="table" class="scroll" style="max-height:none"></div>
+  </div>
+</main>
+<script src="/static/common.js"></script>
+<script>
+(async () => {
+  const rows = await api("compare");
+  const fin = rows.filter((r) => r.final);
+  const groups = {};
+  for (const r of fin) (groups[r.config_hash + " · " + r.code_version + " · " + (r.provider || "")] ||= []).push(r);
+  const labels = [...new Set(fin.map((r) => r.final))].sort();
+  const wil = (k, n) => { if (!n) return ""; const z = 1.96, p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)); return `${Math.round(100 * (c - m) / d)}–${Math.round(100 * (c + m) / d)}%`; };
+  $("#summary").innerHTML = `<table><tr><th>config · code · decision maker</th><th>n</th>${labels.map((l) => `<th>${esc(l.replaceAll("_", " "))}</th>`).join("")}<th>mean legitimacy</th></tr>${Object.entries(groups).map(([g, rs]) =>
+    `<tr><td class="mono">${esc(g)}</td><td>${rs.length}</td>${labels.map((l) => { const k = rs.filter((r) => r.final === l).length; return `<td>${k} <span class="muted">(${Math.round(100 * k / rs.length)}%, CI ${wil(k, rs.length)})</span></td>`; }).join("")}
+    <td>${(rs.reduce((s, r) => s + (r.legitimacy || 0), 0) / rs.length).toFixed(3)}</td></tr>`).join("")}</table>`;
+  const cols = ["id", "seed", "status", "round", "final", "provider", "config_hash", "code_version", "false_flags", "genuine_share", "eliminations", "legitimacy", "fear", "exposure", "premise"];
+  $("#table").innerHTML = `<table><tr>${cols.map((c) => `<th>${c}</th>`).join("")}<th>milestones</th><th></th></tr>${rows.map((r) =>
+    `<tr>${cols.map((c) => `<td class="${c === "id" ? "mono" : ""}">${esc(r[c] ?? "")}</td>`).join("")}<td>${esc(Object.entries(r.milestones).map(([k, v]) => `${k}@${v}`).join(", "))}</td>
+    <td><a href="/control?run=${esc(r.id)}">open</a> · <a href="/api/runs/${esc(r.id)}/export">export</a></td></tr>`).join("")}</table>`;
+})();
+</script>
+</body>
+</html>

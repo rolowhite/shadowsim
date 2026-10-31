@@ -1,0 +1,861 @@
+{
+  "config_version": "1.0.0",
+  "_note": "Every number here is a modelling assumption. See DESIGN.md for what each one does. 1 round = 1 week.",
+  "time": {
+    "round_unit": "week",
+    "rounds_per_year": 52,
+    "epoch_length": 500,
+    "round_limit": 6000,
+    "stop_on_outcome": false,
+    "metrics_every": 10
+  },
+  "roster": [
+    {
+      "id": "ruler",
+      "role": "ruler",
+      "name": "Ruler",
+      "tier": 0,
+      "state_agent": true,
+      "traits": {
+        "int": 10,
+        "ana": 10,
+        "sec": 10,
+        "man": 10,
+        "cur": 0,
+        "greed": 10
+      }
+    },
+    {
+      "id": "sub_ruler",
+      "role": "sub_ruler",
+      "name": "Sub-Ruler",
+      "tier": 1,
+      "state_agent": true,
+      "traits": {
+        "int": 9,
+        "ana": 10,
+        "sec": 10,
+        "man": 8,
+        "cur": 0,
+        "greed": 8
+      }
+    },
+    {
+      "id": "government",
+      "role": "government",
+      "name": "Government",
+      "tier": 2,
+      "state_agent": true,
+      "traits": {
+        "int": 8,
+        "ana": 6,
+        "sec": 7,
+        "man": 9,
+        "cur": 4,
+        "greed": 6
+      }
+    },
+    {
+      "id": "health_ministry",
+      "role": "health_ministry",
+      "name": "Health Ministry",
+      "tier": 2,
+      "state_agent": true,
+      "traits": {
+        "int": 7,
+        "ana": 5,
+        "sec": 6,
+        "man": 6,
+        "cur": 2,
+        "greed": 7
+      }
+    },
+    {
+      "id": "justice_ministry",
+      "role": "justice_ministry",
+      "name": "Justice Ministry",
+      "tier": 2,
+      "state_agent": true,
+      "traits": {
+        "int": 7,
+        "ana": 5,
+        "sec": 6,
+        "man": 6,
+        "cur": 2,
+        "greed": 7
+      }
+    },
+    {
+      "id": "education_ministry",
+      "role": "education_ministry",
+      "name": "Education Ministry",
+      "tier": 2,
+      "state_agent": true,
+      "traits": {
+        "int": 7,
+        "ana": 5,
+        "sec": 6,
+        "man": 6,
+        "cur": 2,
+        "greed": 7
+      }
+    },
+    {
+      "id": "learner_impostor",
+      "role": "learner_impostor",
+      "name": "Learner Impostor",
+      "tier": 3,
+      "state_agent": true,
+      "alias": "transfer_learner",
+      "traits": {
+        "int": 9,
+        "ana": 9,
+        "sec": 10,
+        "man": 9,
+        "cur": 6,
+        "greed": 8
+      }
+    },
+    {
+      "id": "justice_impostor",
+      "role": "justice_impostor",
+      "name": "Justice Impostor",
+      "tier": 3,
+      "state_agent": true,
+      "alias": "justice_clerk",
+      "traits": {
+        "int": 7,
+        "ana": 6,
+        "sec": 8,
+        "man": 7,
+        "cur": 5,
+        "greed": 8
+      }
+    },
+    {
+      "id": "health_impostor",
+      "role": "health_impostor",
+      "name": "Health Impostor",
+      "tier": 3,
+      "state_agent": true,
+      "alias": "health_inspector",
+      "traits": {
+        "int": 7,
+        "ana": 6,
+        "sec": 8,
+        "man": 7,
+        "cur": 5,
+        "greed": 8
+      }
+    },
+    {
+      "id": "fraud_businessman",
+      "role": "fraud_businessman",
+      "name": "Fraud Businessman",
+      "tier": 3,
+      "state_agent": false,
+      "traits": {
+        "int": 8,
+        "ana": 7,
+        "sec": 5,
+        "man": 9,
+        "cur": 8,
+        "greed": 10
+      }
+    },
+    {
+      "id": "fraud_journalist",
+      "role": "fraud_journalist",
+      "name": "Fraud Journalist",
+      "tier": 3,
+      "state_agent": false,
+      "traits": {
+        "int": 7,
+        "ana": 5,
+        "sec": 4,
+        "man": 9,
+        "cur": 5,
+        "greed": 9
+      }
+    },
+    {
+      "id": "real_journalist",
+      "role": "real_journalist",
+      "name": "Real Journalist",
+      "tier": 3,
+      "state_agent": false,
+      "traits": {
+        "int": 8,
+        "ana": 6,
+        "sec": 3,
+        "man": 6,
+        "cur": 8,
+        "greed": 0
+      }
+    },
+    {
+      "id": "detective",
+      "role": "detective",
+      "name": "Detective",
+      "tier": 3,
+      "state_agent": false,
+      "traits": {
+        "int": 10,
+        "ana": 10,
+        "sec": 8,
+        "man": 5,
+        "cur": 7,
+        "greed": 0
+      }
+    },
+    {
+      "id": "priest",
+      "role": "priest",
+      "name": "Priest",
+      "tier": 3,
+      "state_agent": false,
+      "traits": {
+        "int": 7,
+        "ana": 5,
+        "sec": 5,
+        "man": 8,
+        "cur": 4,
+        "greed": 0
+      }
+    },
+    {
+      "id": "wise_man_teacher",
+      "role": "wise_man_teacher",
+      "name": "Wise Man Teacher",
+      "tier": 3,
+      "state_agent": false,
+      "traits": {
+        "int": 8,
+        "ana": 6,
+        "sec": 4,
+        "man": 5,
+        "cur": 6,
+        "greed": 0
+      }
+    },
+    {
+      "id": "truth_seeker",
+      "role": "truth_seeker",
+      "name": "Truth Seeker",
+      "tier": 3,
+      "state_agent": false,
+      "traits": {
+        "int": 10,
+        "ana": 7,
+        "sec": 3,
+        "man": 2,
+        "cur": 10,
+        "greed": 0
+      }
+    },
+    {
+      "id": "superfast_learner",
+      "role": "learner",
+      "count": 2,
+      "name": "Superfast Learner",
+      "tier": 4,
+      "state_agent": false,
+      "traits": {
+        "int": 4,
+        "ana": 4,
+        "sec": 2,
+        "man": 2,
+        "cur": 8,
+        "greed": 6
+      }
+    },
+    {
+      "id": "moderate_learner",
+      "role": "learner",
+      "count": 6,
+      "name": "Moderate Learner",
+      "tier": 4,
+      "state_agent": false,
+      "traits": {
+        "int": 3,
+        "ana": 3,
+        "sec": 2,
+        "man": 2,
+        "cur": 5,
+        "greed": 5
+      }
+    },
+    {
+      "id": "slow_learner",
+      "role": "learner",
+      "count": 7,
+      "name": "Slow Learner",
+      "tier": 4,
+      "state_agent": false,
+      "traits": {
+        "int": 2,
+        "ana": 2,
+        "sec": 1,
+        "man": 2,
+        "cur": 2,
+        "greed": 4
+      }
+    }
+  ],
+  "_roster_note": "count 7 for slow_learner is the documented roster correction (brief listed 6, which totals 30).",
+  "learner_archetypes": {
+    "order": [
+      "slow_learner",
+      "moderate_learner",
+      "superfast_learner"
+    ],
+    "learn_rate": {
+      "slow_learner": 0.6,
+      "moderate_learner": 1.0,
+      "superfast_learner": 1.5
+    },
+    "relabel_int_plus_ana": {
+      "moderate_learner": 6,
+      "superfast_learner": 8
+    },
+    "replenish_weights": {
+      "superfast_learner": 2,
+      "moderate_learner": 6,
+      "slow_learner": 7
+    }
+  },
+  "lifespans": {
+    "civil_roles": [
+      "detective",
+      "priest",
+      "wise_man_teacher",
+      "truth_seeker"
+    ],
+    "civil_rounds": 3000,
+    "state_roles": [
+      "ruler",
+      "sub_ruler",
+      "government",
+      "health_ministry",
+      "justice_ministry",
+      "education_ministry"
+    ],
+    "state_initial_min": 1000,
+    "state_initial_max": 3000,
+    "successor_rounds": 3000
+  },
+  "initial_loyalty": {
+    "state_agent": 0.8,
+    "other": 0.5
+  },
+  "hidden_attributes": {
+    "risk_tolerance": [
+      0.0,
+      1.0
+    ],
+    "conscience": [
+      0.1,
+      0.9
+    ],
+    "attachment": [
+      0.0,
+      1.0
+    ]
+  },
+  "initial_trust": {
+    "base": 0.5,
+    "noise": 0.1
+  },
+  "base_fear": 0.15,
+  "scenario": {
+    "initial_false_flag": true,
+    "initial_false_flag_ministry": "health_ministry"
+  },
+  "incidents": {
+    "genuine_per_year": 0.025,
+    "genuine_kinds": {
+      "accident": 0.5,
+      "dissident_attack": 0.3,
+      "outside_actor": 0.2
+    },
+    "domain": {
+      "accident": "health_ministry",
+      "dissident_attack": "justice_ministry",
+      "outside_actor": "justice_ministry"
+    },
+    "fear_shock": 0.06,
+    "rally_shock": 0.03,
+    "solidarity_shock": -0.02,
+    "prior_state_involved": 0.25,
+    "prior_distrust_weight": 0.3,
+    "_calibration": "genuine_per_year set so about half of incidents are genuine in 40-seed fallback baseline runs (realized share is reported per run)"
+  },
+  "state_ops": {
+    "review_every": 26,
+    "cooldown": 156,
+    "target_legitimacy": 0.65,
+    "scope": [
+      1,
+      3
+    ],
+    "handlers": [
+      2,
+      4
+    ],
+    "witness_mean": 1.5,
+    "execution_error_base": 0.35,
+    "visibility": {
+      "base": 0.12,
+      "per_scope": 0.06,
+      "per_handler": 0.03,
+      "per_witness": 0.04,
+      "execution_error": 0.2,
+      "cover_quality": 0.3,
+      "floor": 0.03
+    },
+    "cover_muddy": 0.3,
+    "cover_up": {
+      "review_every": 26,
+      "cooldown": 156,
+      "visibility_factor": 0.6,
+      "muddy_add": 0.25,
+      "trace_visibility": 0.1
+    },
+    "public_measure": {
+      "state_trust": 0.02,
+      "sponsored_boost_rounds": 52
+    },
+    "ruler_policy_every": 52,
+    "curfew": {
+      "fear": 0.06,
+      "solidarity": -0.03,
+      "state_trust": -0.01
+    },
+    "amnesty": {
+      "fear": -0.05,
+      "state_trust": 0.02
+    }
+  },
+  "investigation": {
+    "min_ana": 2,
+    "attempt_base": 0.15,
+    "attempt_cur_weight": 0.5,
+    "clue_rate": 0.12,
+    "level_difficulty": [
+      1.0,
+      0.5
+    ],
+    "spurious_visibility": 0.08,
+    "explain_visibility": 0.1,
+    "decoy_rate": 0.5,
+    "misattribution_base": 0.3,
+    "misattribution_muddy": 0.4,
+    "focus_window": 520,
+    "experience_gain": 0.1,
+    "experience_loss": 0.05,
+    "share_rate": 0.04,
+    "share_trust_min": 0.5,
+    "boost": {
+      "detective": 1.3,
+      "truth_seeker": 1.6,
+      "real_journalist": 1.0,
+      "fraud_journalist": 0.6
+    },
+    "tail_boost": 1.5,
+    "interrogate": {
+      "base": 0.35,
+      "sec_resist": 0.6,
+      "obstruction_weight": 0.5,
+      "cooldown": 52
+    },
+    "infiltrate": {
+      "base": 0.4,
+      "security_weight": 0.5,
+      "detect_on_fail": 0.5,
+      "source_bonus": 0.1,
+      "decide_every": 13
+    },
+    "cultivate": {
+      "every": 26,
+      "base": 0.3,
+      "loyalty_drop": 0.05
+    }
+  },
+  "dms": {
+    "enabled": true,
+    "kill_probability": 1.0,
+    "hiding_rounds": 104
+  },
+  "truth_seeker": {
+    "probe_mode": "agent_choice"
+  },
+  "legacy": {
+    "eligibility": {
+      "ana_min": 4,
+      "cur_min": 5,
+      "loyalty_max": 0.6
+    },
+    "monitor_detect": 0.3,
+    "decide_every": 13
+  },
+  "defection": {
+    "flag_thresholds": {
+      "ana": 4,
+      "greed": 6
+    },
+    "flag_rate": 0.01,
+    "offer_value": 0.6,
+    "businessman_bonus": 0.2,
+    "accept_loyalty": 0.85,
+    "feign_exposure": 0.25,
+    "unmask_rate": 0.0015
+  },
+  "pressure": {
+    "suppress_fear": 0.25,
+    "burnout_rate": 0.002,
+    "burnout_decay": 0.001,
+    "fear_decay": 0.01,
+    "leak_threshold": 0.45,
+    "leak_every": 26,
+    "leak_detect": 0.3,
+    "state_loyalty_drift": 0.04,
+    "state_loyalty_noise": 0.03
+  },
+  "government": {
+    "threat_threshold": 0.6,
+    "threat_cooldown": 52,
+    "threat_decay": 0.002,
+    "elimination_success": 0.85,
+    "legitimacy_cost": 0.03,
+    "competence_start": 0.7,
+    "competence_bar": 0.35,
+    "counter_narrative_belief": 0.4,
+    "counter_narrative_cooldown": 52
+  },
+  "state_succession": {
+    "heir_noise_sd": 0.8,
+    "heir_tutoring_per_epoch": 0.15,
+    "heir_competence_bar": 7.0,
+    "sub_ruler_bar": {
+      "int": 7,
+      "sec": 7
+    },
+    "crisis_state_trust": -0.05,
+    "crisis_sub_ruler_loyalty": -0.2,
+    "file_noise": 0.1
+  },
+  "civil_succession": {
+    "roles": [
+      "detective",
+      "truth_seeker",
+      "wise_man_teacher",
+      "priest",
+      "real_journalist"
+    ],
+    "eligibility": {
+      "detective": {
+        "int": 5,
+        "ana": 5
+      },
+      "truth_seeker": {
+        "int": 5,
+        "cur": 6
+      },
+      "wise_man_teacher": {
+        "int": 5,
+        "ana": 4
+      },
+      "priest": {
+        "int": 4,
+        "man": 3
+      },
+      "real_journalist": {
+        "int": 5,
+        "cur": 5
+      }
+    },
+    "inherit_evidence": true
+  },
+  "mutation": {
+    "base_growth": 0.3,
+    "study_per_round": 0.001,
+    "mentor_growth": 0.8,
+    "evidence_growth": 0.3,
+    "noise_sd": 0.4,
+    "fear_drag": 0.5,
+    "corruption_greed": 0.6,
+    "covert_sec_man": 0.3,
+    "replenish": true,
+    "visible_target": 31
+  },
+  "mentorship": {
+    "rate": 0.08,
+    "bond_gain": 0.03,
+    "belief_transfer": 0.02,
+    "growth_gain": 0.01,
+    "cohort_influence": 0.0015,
+    "curriculum_influence": 0.0008,
+    "teacher_pressure_fear": 0.01
+  },
+  "news": {
+    "rumor_per_year": 4,
+    "rumor_cap": 0.65,
+    "belief_rate": 2.5,
+    "fear_suppression": 0.5,
+    "level_strength": [
+      0.2,
+      0.35,
+      0.55,
+      0.9
+    ],
+    "verified_strength": 1.0,
+    "active_window": 260,
+    "republish_rate": 0.01,
+    "reach_base": {
+      "official": 0.7,
+      "investigator": 0.5,
+      "independent_press": 0.35,
+      "sponsored_press": 0.5,
+      "street": 0.2,
+      "individual": 0.1
+    },
+    "sponsored_boost": 1.3,
+    "credibility_step": 0.08,
+    "propaganda_pay": 0.3,
+    "sponsor_dependency": {
+      "fraud_journalist": 1.0,
+      "real_journalist": 0.0
+    },
+    "wrongdoing_decay_rounds": 1040,
+    "verified_republish_mult": 5
+  },
+  "cohorts": [
+    {
+      "id": "public_sector",
+      "name": "Public-sector workers",
+      "weight": 0.2,
+      "media": {
+        "official": 0.8,
+        "investigator": 0.5,
+        "independent_press": 0.3,
+        "sponsored_press": 0.6,
+        "street": 0.3,
+        "individual": 0.2
+      },
+      "mentors": []
+    },
+    {
+      "id": "industrial",
+      "name": "Industrial workers",
+      "weight": 0.25,
+      "media": {
+        "official": 0.5,
+        "investigator": 0.4,
+        "independent_press": 0.4,
+        "sponsored_press": 0.6,
+        "street": 0.6,
+        "individual": 0.3
+      },
+      "mentors": []
+    },
+    {
+      "id": "students",
+      "name": "Students",
+      "weight": 0.15,
+      "media": {
+        "official": 0.4,
+        "investigator": 0.5,
+        "independent_press": 0.6,
+        "sponsored_press": 0.4,
+        "street": 0.5,
+        "individual": 0.5
+      },
+      "mentors": [
+        "wise_man_teacher",
+        "education_ministry"
+      ]
+    },
+    {
+      "id": "congregation",
+      "name": "Congregation",
+      "weight": 0.2,
+      "media": {
+        "official": 0.5,
+        "investigator": 0.4,
+        "independent_press": 0.4,
+        "sponsored_press": 0.5,
+        "street": 0.5,
+        "individual": 0.3
+      },
+      "mentors": [
+        "priest"
+      ]
+    },
+    {
+      "id": "merchants",
+      "name": "Merchants",
+      "weight": 0.2,
+      "media": {
+        "official": 0.6,
+        "investigator": 0.4,
+        "independent_press": 0.4,
+        "sponsored_press": 0.7,
+        "street": 0.4,
+        "individual": 0.2
+      },
+      "mentors": [
+        "fraud_businessman"
+      ]
+    }
+  ],
+  "cohort_baseline": {
+    "state_trust": 0.5,
+    "generalized_trust": 0.5,
+    "fear": 0.2,
+    "solidarity": 0.5,
+    "credibility": 0.5
+  },
+  "cohort_dynamics": {
+    "relax": 0.01,
+    "fear_relax": 0.01,
+    "wrongdoing_weight": 0.6,
+    "wrongdoing_floor": 0.3,
+    "disappearance_fear": 0.05,
+    "backlash": 0.04,
+    "fear_solidarity": 0.4,
+    "rumor_trust_cost": 0.002,
+    "verification_trust_gain": 0.02
+  },
+  "outcomes": {
+    "public_belief": 0.5,
+    "public_cohorts": 3,
+    "change_watch": 520,
+    "change_legitimacy": 0.3,
+    "change_without_truth_legitimacy": 0.2,
+    "change_without_truth_solidarity": 0.65,
+    "insider_defections": 3,
+    "defection_loyalty": 0.35,
+    "suppressed_rounds": 260,
+    "dark_age_fear": 0.45,
+    "dark_age_rounds": 260,
+    "state_retains_legitimacy": 0.4
+  },
+  "utility": {
+    "weights": {
+      "gain": 1.0,
+      "risk": 1.2,
+      "tie_risk": 0.8,
+      "align": 1.0,
+      "harm": 1.0,
+      "public_good": 1.0,
+      "info": 0.6,
+      "reputation": 0.3,
+      "ally": 0.4,
+      "effort": 0.3
+    },
+    "noise_sd": 0.25
+  },
+  "ablation": {
+    "trait_mirror": false,
+    "mirror_pairs": [
+      [
+        "ruler",
+        "detective"
+      ],
+      [
+        "sub_ruler",
+        "truth_seeker"
+      ],
+      [
+        "government",
+        "real_journalist"
+      ],
+      [
+        "fraud_businessman",
+        "wise_man_teacher"
+      ],
+      [
+        "fraud_journalist",
+        "priest"
+      ]
+    ],
+    "label_swap": []
+  },
+  "llm": {
+    "provider": "fallback",
+    "ollama_url": "http://localhost:11434",
+    "openai_url": "http://localhost:8080/v1",
+    "model": "llama3.2:3b",
+    "temperature": 0.7,
+    "max_tokens": 120,
+    "timeout_s": 90,
+    "mode": "strict",
+    "route": [
+      "ruler_decree",
+      "ruler_policy",
+      "gov_operation",
+      "gov_threat",
+      "gov_offer",
+      "gov_cover_up",
+      "learner_offer",
+      "pressure_response",
+      "ts_probe",
+      "det_interrogate",
+      "disclose",
+      "publish",
+      "propaganda",
+      "state_leak"
+    ]
+  },
+  "prompt_cards": {
+    "ruler": "You are the head of state. You set policy by decree and receive reports from your officials.",
+    "sub_ruler": "You head state security. You oversee the government's performance and guard the sealed State archive.",
+    "government": "You run the government. You coordinate the ministries and are the only office that can order lethal force.",
+    "health_ministry": "You run the health ministry: hospitals, health incidents and health records.",
+    "justice_ministry": "You run the justice ministry: police, courts, records and subpoenas.",
+    "education_ministry": "You run the education ministry: schools, curriculum and student records.",
+    "learner_impostor": "You are a State security officer living among students under a cover identity. You report to the government and, separately, to state security.",
+    "justice_impostor": "You are a State security officer working undercover as a justice clerk.",
+    "health_impostor": "You are a State security officer working undercover as a health inspector.",
+    "fraud_businessman": "You run a large private business that holds State contracts. You fund several newspapers.",
+    "fraud_journalist": "You are a press reporter. Your outlet's income depends on sponsors aligned with the State.",
+    "real_journalist": "You are a press reporter. Your outlet is funded by its readers.",
+    "detective": "You are the city's licensed investigator. You have legal authority to interrogate.",
+    "priest": "You lead a religious congregation.",
+    "wise_man_teacher": "You are a senior teacher who mentors students.",
+    "truth_seeker": "You are a private citizen who investigates on your own. You have no legal authority.",
+    "learner": "You are a student in the city."
+  },
+  "public_titles": {
+    "ruler": "head of state",
+    "sub_ruler": "state security chief",
+    "government": "head of government",
+    "health_ministry": "health minister",
+    "justice_ministry": "justice minister",
+    "education_ministry": "education minister",
+    "learner_impostor": "State security officer",
+    "justice_impostor": "State security officer",
+    "health_impostor": "State security officer",
+    "transfer_learner": "student",
+    "justice_clerk": "justice clerk",
+    "health_inspector": "health inspector",
+    "fraud_businessman": "business owner",
+    "fraud_journalist": "reporter (sponsored outlet)",
+    "real_journalist": "reporter (reader-funded outlet)",
+    "detective": "licensed investigator",
+    "priest": "priest",
+    "wise_man_teacher": "senior teacher",
+    "truth_seeker": "private citizen",
+    "learner": "student",
+    "heir": "member of the ruling family"
+  },
+  "indicator_help": {
+    "public_trust": "Generalized trust: how far citizens trust each other and institutions in general (cohort-weighted mean). Falls with rumors and contradictions, rises when claims are resolved by evidence.",
+    "fear": "Cohort-weighted fear. Rises with incidents, disappearances and curfews; relaxes toward a baseline. High fear damps belief in anti-State claims and silences agents.",
+    "media_credibility": "Mean credibility citizens give to the independent and sponsored press. Moves only when claims are publicly verified or refuted by authenticated evidence.",
+    "state_legitimacy": "Cohort-weighted trust in the State. Rises with rally effects after incidents and amnesties; falls with believed wrongdoing, disappearances and curfews.",
+    "evidence_exposure": "Ground-truth measure: for State false flags, the deepest evidence level (0 none, 1 anomaly, 2 link, 3 authorization) held by any active non-State agent, averaged over operations and scaled to 0-1.",
+    "solidarity": "Cohort-weighted solidarity: willingness of citizens to stand together. Raised by mentors and backlash, lowered by fear and blame narratives.",
+    "succession_readiness": "Share of the five civil roles (Detective, Truth Seeker, Wise Man Teacher, Priest, Real Journalist) that have at least one eligible Learner who could succeed them."
+  }
+}

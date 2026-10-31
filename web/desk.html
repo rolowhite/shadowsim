@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Investigation Desk</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="bar">
+  <h1>Shadow City · Investigation Desk</h1>
+  <div class="meta" id="meta"><span class="muted">Loading…</span></div>
+  <div class="spacer"></div>
+  <button class="toggle-omni" id="truthToggle" aria-pressed="false" title="Compare claims with simulation ground truth. Off by default.">Truth Audit: OFF</button>
+  <a class="btn" id="exportBtn" href="#">Export run + notes</a>
+  <a class="btn" id="controlLink" href="/control">Control Room</a>
+</header>
+<main>
+  <div id="banner" class="banner" hidden></div>
+  <div class="panel">
+    <div class="legend"><b>What each item is:</b>
+      <span class="badge b-fact">fact</span> engine-recorded public event
+      <span class="badge b-claim">agent claim</span> published by a person or office
+      <span class="badge b-rumor">rumor</span> unsourced street talk
+      <span class="badge b-infer">Detective inference</span> the Detective's reading, may be wrong
+      <span class="badge b-verified">Detective verified</span> backed by a signature-checked decree
+      <span class="badge b-spec">your speculation</span> your notes; agents never see them
+    </div>
+    <div class="filters" style="margin-top:10px">
+      <label>Search <input id="fText" type="search" placeholder="text, id, case…"></label>
+      <label>Rounds <input id="fFrom" type="number" style="width:80px" placeholder="from"> – <input id="fTo" type="number" style="width:80px" placeholder="to"></label>
+      <label>Source <select id="fSource"><option value="">any</option></select></label>
+      <label>Topic <select id="fTopic"><option value="">any case</option></select></label>
+      <label>Status <select id="fStatus"><option value="">any</option><option>verified</option><option>unverified</option><option>contradicted</option><option>under_investigation</option></select></label>
+    </div>
+  </div>
+  <div class="grid-desk">
+    <section class="panel">
+      <h2>Detective's Casebook <small id="detName"></small></h2>
+      <p class="muted" style="margin-top:0">Only findings available to the Detective. Statuses are the Detective's assessment.</p>
+      <div class="list" id="casebook"></div>
+    </section>
+    <section class="panel">
+      <h2>News feed <small>published claims and rumors</small></h2>
+      <div class="list" id="news"></div>
+    </section>
+    <section class="panel notes">
+      <h2>Analyst Notes <small>your speculation · never read by the simulation</small></h2>
+      <input type="hidden" id="nId">
+      <label for="nText">Observation or hypothesis</label>
+      <textarea id="nText" rows="4"></textarea>
+      <label for="nConf">Your confidence: <span id="nConfV">50%</span></label>
+      <input id="nConf" type="range" min="0" max="100" value="50" style="width:100%">
+      <label for="nTags">Tags (comma separated)</label><input id="nTags" style="width:100%">
+      <label for="nLinks">Links: claim, case, evidence, event or agent ids (comma separated)</label>
+      <input id="nLinks" list="linkIds" style="width:100%" placeholder="CL-0012, INC-0001, ev-000345, detective">
+      <datalist id="linkIds"></datalist>
+      <div class="row" style="margin-top:8px"><button class="primary" id="nSave">Save note</button><button id="nCancel">Clear</button><span class="err" id="nErr"></span></div>
+      <div class="list" id="notes" style="margin-top:10px"></div>
+    </section>
+  </div>
+</main>
+<script src="/static/common.js"></script>
+<script src="/static/desk.js"></script>
+</body>
+</html>
