@@ -30,12 +30,27 @@
     <details id="newRun" open>
       <summary><b>New run (X factor)</b></summary>
       <label for="seed">Seed</label><input id="seed" type="number" value="1" min="0">
-      <label for="premise">Premise (free text; shown only to agents allowed to see it; changes no mechanics)</label>
+      <label for="premise">Premise (free text narrative; changes no mechanics; use "operator only" if it contains secrets)</label>
       <textarea id="premise" rows="3" placeholder="e.g. A drought has strained food supplies for two years."></textarea>
       <label for="pvis">Premise visibility</label>
       <select id="pvis"><option value="operator">operator only (no agent sees it)</option><option value="public">public (all agents)</option><option value="state">State agents only</option></select>
-      <label for="over">Parameter overrides (one <span class="mono">path=value</span> per line; these are the mechanical X factor)</label>
+      <label for="over">Parameter overrides (one <span class="mono">path=value</span> per line; optional)</label>
       <textarea id="over" rows="4" class="mono" placeholder="incidents.genuine_per_year=0.05&#10;dms.kill_probability=0.8&#10;ablation.trait_mirror=true"></textarea>
+      <fieldset class="backstory">
+        <legend><b>Backstory</b> (the mechanical X factor: becomes real ground truth at round 0)</legend>
+        <p class="muted" style="margin:0 0 6px">Add events in story order. Each event can use labels defined by events above it. Who learns what follows the access rules; nothing here is shown to agents unless an event gives it to them.</p>
+        <div id="bsRows"></div>
+        <div class="row" style="margin-top:6px">
+          <select id="bsType" aria-label="Event type"><option value="person">person: add someone</option><option value="secret">secret: a hidden truth</option><option value="killing">killing: a covert killing</option><option value="destroy">destroy: burn evidence</option><option value="knows">knows: someone learns something</option></select>
+          <button id="bsAdd" type="button">+ Add event</button>
+          <button id="bsExample" type="button">Load example: priest's brother</button>
+          <button id="bsClear" type="button">Clear</button>
+        </div>
+        <details style="margin-top:6px"><summary class="muted">Backstory as JSON (copy, paste, or edit)</summary>
+          <textarea id="bsJson" rows="6" class="mono" spellcheck="false"></textarea>
+          <button id="bsApplyJson" type="button">Use this JSON</button>
+        </details>
+      </fieldset>
       <label for="prov">Decision maker</label>
       <select id="prov"><option value="fallback">Deterministic fallback (rule-based)</option><option value="auto">Auto: local LLM if reachable, else fallback</option><option value="ollama">Ollama (required)</option><option value="openai_compat">OpenAI-compatible server (required)</option></select>
       <label for="model">Model</label><input id="model" placeholder="llama3.2:3b">

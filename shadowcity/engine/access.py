@@ -94,8 +94,20 @@ def desk_audit(eng):
     w = eng.w
     return {"claims": {cl["id"]: {"truth": cl["truth"], "case_was": w.cases[cl["case"]]["kind"] if cl["case"] else None}
                        for cl in w.claims.values()},
-            "cases": {cid: {"kind": c["kind"], "true_cause": "State decree " + c["decree"] if c["decree"] else c["subtype"],
+            "cases": {cid: {"kind": c["kind"], "true_cause": true_cause(eng, c),
                             "ministry": c["ministry"] if c["decree"] else None} for cid, c in w.cases.items()}}
+
+
+def true_cause(eng, c):
+    if not c["decree"]:
+        return c["subtype"]
+    d = eng.w.decrees[c["decree"]]
+    if d["kind"] == "family_secret":
+        return f"TRUE: {d['description']} (sealed record {d['id']})"
+    if d["kind"] == "killing_order":
+        return (f"killed on the order of {eng.label(d['issued_by'])} via {eng.label(d['executor'])}"
+                + (" (outside the law)" if d.get("extra_legal") else "") + f", decree {d['id']}")
+    return "State decree " + d["id"]
 
 
 def control_view(eng):
@@ -141,6 +153,5 @@ def audit_view(eng):
 
 
 def genuine_share(eng):
-    cs = eng.w.cases.values()
-    n = len(cs)
-    return round(sum(c["kind"] == "genuine" for c in cs) / n, 3) if n else None
+    cs = [c for c in eng.w.cases.values() if c["kind"] in ("genuine", "false_flag")]  # incidents only, not backstory
+    return round(sum(c["kind"] == "genuine" for c in cs) / len(cs), 3) if cs else None

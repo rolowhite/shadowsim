@@ -36,7 +36,7 @@ def resistance_alive(eng):
         if a.id in holders:
             return True
         for cid, k in a.knowledge.items():
-            if k["level"] >= 2 and not k["explained"] and w.cases[cid]["kind"] == "false_flag":
+            if k["level"] >= 2 and not k["explained"] and w.cases[cid]["decree"]:
                 return True
     return False
 
@@ -83,7 +83,7 @@ def check(eng):
     t = w.milestones.get("truth_verified_public")
     if t is None:
         for cid, case in w.cases.items():
-            if case["publicly_verified"] and case["kind"] == "false_flag" and believed(eng, cid):
+            if case["publicly_verified"] and case["decree"] and believed(eng, cid):
                 mark(eng, "truth_verified_public", case=cid)
                 t = w.milestones["truth_verified_public"]
                 break

@@ -10,6 +10,7 @@ from .state import IMPOSTORS, MINISTRIES, LEARNER, VISIBLE
 HANDLER = {"health_ministry": "health_impostor", "justice_ministry": "justice_impostor"}
 OP_MINISTRIES = ("health_ministry", "justice_ministry")
 STORY = {"dissident_attack": "an attack by dissidents", "outside_actor": "sabotage by an outside power",
+         "house_fire": "a house fire", "illness": "illness", "unexplained": "not explained",
          "accident": "an accident"}
 LEVELS = {0: "none", 1: "anomaly", 2: "link", 3: "authorization"}
 PROOF_KINDS = ("records", "archive", "leak_decree", "packet")
@@ -144,8 +145,7 @@ def launch_false_flag(eng, ministry, proposer=None, decided_by=None):
     error = r.random() < c["execution_error_base"] * (1 - 0.7 * (minister.traits["int"] + hint) / 20)
     cover = (minister.traits["sec"] + hsec) / 20 * r.uniform(0.7, 1.0)
     v = c["visibility"]
-    vis = clamp(v["base"] + v["per_scope"] * scope + v["per_handler"] * nh + v["per_witness"] * wit
-                + (v["execution_error"] if error else 0) - v["cover_quality"] * cover, v["floor"], 0.95)
+    vis = trace_vis(eng, scope, nh, wit, error, cover)
     did, cid = eng.next_id("DCR"), eng.next_id("INC")
     decree = {"id": did, "round": w.round, "kind": "false_flag", "case": cid, "ministry": ministry,
               "issued_by": ruler.id, "proposed_by": proposer, "executor": minister.id,
@@ -170,6 +170,12 @@ def launch_false_flag(eng, ministry, proposer=None, decided_by=None):
     w.gov_stats["ops"] += 1
     w.last["op"] = w.round
     return w.cases[cid]
+
+
+def trace_vis(eng, scope, handlers, witnesses, error, cover):
+    v = eng.cfg["state_ops"]["visibility"]
+    return clamp(v["base"] + v["per_scope"] * scope + v["per_handler"] * handlers + v["per_witness"] * witnesses
+                 + (v["execution_error"] if error else 0) - v["cover_quality"] * cover, v["floor"], 0.95)
 
 
 def trace_visibility(eng, case):
@@ -223,6 +229,11 @@ def learn(eng, a, cid, level=0, attr=None, evidence=(), explained=False, decree=
                                        "attr": k["attr"], "source": source})
     if a.role == "detective" and a.active:
         detective_update(eng, a, cid, source, via)
+    d = w.decrees.get(k["decree"]) if k["level"] == 3 and k["decree"] else None
+    if d and d.get("motive_case"):  # the authenticated order names why the victim was targeted
+        m = w.cases[d["motive_case"]]
+        learn(eng, a, m["id"], level=2, attr=m["ministry"], evidence=k["evidence"][-1:],
+              source=f"order {d['id']} names the motive")
     if informant(a) and not a.state_agent:
         state_learns(eng, cid, k["level"], about=None, via=a.id)
     return True
@@ -268,7 +279,7 @@ def state_learns(eng, cid, level, about=None, via=None, threat=None):
         f["threat"] = min(1.5, f["threat"] + (threat if threat is not None else 0.15 * level))
         f["records"] = (f["records"] + [[w.round, cid, level]])[-10:]
     case = w.cases.get(cid)
-    if case and case["kind"] == "false_flag" and level >= 2 and cid not in w.gov_stats["exposed"]:
+    if case and case["decree"] and level >= 2 and cid not in w.gov_stats["exposed"]:
         w.gov_stats["exposed"].append(cid)
         w.competence = clamp(w.competence - 0.15)
     sub = eng.holder("sub_ruler")
@@ -307,7 +318,7 @@ def investigate(eng, a, boost=1.0):
     k = a.knowledge.get(case["id"], {})
     level, sk, cr = k.get("level", 0), skill(a), ic["clue_rate"] * boost
     roll = eng.rng.random()
-    if case["kind"] == "false_flag":
+    if case["decree"]:
         p_clue = 0.0 if level >= 2 else cr * trace_visibility(eng, case) * sk * ic["level_difficulty"][level]
         p_decoy = cr * ic["decoy_rate"] * case["muddy"] * (1 - sk)
         if roll < p_clue:
@@ -404,7 +415,7 @@ def sanitized_report(eng):
     spin = 0.15 * gov.traits["man"] / 10 if gov else 0.0
     acc = sub.traits["ana"] / 10 if sub else 0.0
     rep_leg = 0.5 * (leg + spin) + 0.5 * (acc * leg + (1 - acc) * (leg + spin))
-    exposure = max([lv for cid, lv in w.state_exposure.items() if w.cases[cid]["kind"] == "false_flag"] or [0]) / 3
+    exposure = max([lv for cid, lv in w.state_exposure.items() if w.cases[cid]["decree"]] or [0]) / 3
     return {"legitimacy": round(clamp(rep_leg), 3), "solidarity": round(clamp(sol - spin * 0.5), 3),
             "exposure": round(exposure, 3), "competence": round(w.competence, 3)}
 
@@ -503,7 +514,7 @@ def government_turn(eng, g):
     if w.round % cu["review_every"] == 0:
         for cid, lv in sorted(w.state_exposure.items()):
             case = w.cases[cid]
-            if (case["kind"] != "false_flag" or lv < 1 or lv <= case.get("covered_level", 0)
+            if (not case["decree"] or lv < 1 or lv <= case.get("covered_level", 0)
                     or (case["covered"] is not None and w.round - case["covered"] < cu["cooldown"])):
                 continue  # review only when the State learns of deeper exposure than at the last review
             opts = [opt("COVER_UP", "COVER_UP", f"Order a cover-up of {cid}: shred files, move witnesses. It leaves its own trail.",
@@ -516,24 +527,26 @@ def government_turn(eng, g):
             break  # one review per cycle
 
 
-def cover_up(eng, g, case, decided_by):
+def cover_up(eng, g, case, decided_by, attribution="justice_ministry", informed=None, passes=1):
+    """One cover-up = one signed order and one new trace; `passes` is how thorough it was."""
     w, cu = eng.w, eng.cfg["state_ops"]["cover_up"]
     for tid in case["traces"]:
         t = w.traces[tid]
         if t["kind"] == "decree":
-            t["visibility"] = round(max(t["floor"], t["visibility"] * cu["visibility_factor"]), 4)
-    case["muddy"] = round(min(1.0, case["muddy"] + cu["muddy_add"]), 4)
+            t["visibility"] = round(max(t["floor"], t["visibility"] * cu["visibility_factor"] ** passes), 4)
+    case["muddy"] = round(min(1.0, case["muddy"] + cu["muddy_add"] * passes), 4)
     oid = eng.next_id("ORD")
-    order = {"id": oid, "round": w.round, "kind": "cover_up", "case": case["id"], "issued_by": g.id}
+    order = {"id": oid, "round": w.round, "kind": "cover_up", "case": case["id"], "issued_by": g.id, "passes": passes}
     order["signature"] = sign(eng.key, order)
     w.orders[oid] = order
     tid = eng.next_id("TR")
     w.traces[tid] = {"id": tid, "case": case["id"], "kind": "cover_up", "order": oid, "visibility": cu["trace_visibility"],
-                     "base_visibility": cu["trace_visibility"], "floor": cu["trace_visibility"], "attribution": "justice_ministry"}
+                     "base_visibility": cu["trace_visibility"], "floor": cu["trace_visibility"], "attribution": attribution}
     case["traces"].append(tid)
-    jm, sub = eng.holder("justice_ministry"), eng.holder("sub_ruler")
+    if informed is None:
+        informed = [x.id for x in (g, eng.holder("justice_ministry"), eng.holder("sub_ruler")) if x]
     eng.emit("government", "cover_up", f"<<a:{g.id}>> ordered a cover-up of {case['id']} (order {oid}).", actor=g.id,
-             visibility=[x.id for x in (g, jm, sub) if x], data={"case": case["id"], "order": oid}, decided_by=decided_by)
+             visibility=informed, data={"case": case["id"], "order": oid}, decided_by=decided_by)
 
 
 def threat_response(eng, g):
@@ -612,10 +625,10 @@ def eliminate(eng, g, T, decided_by):
                  visibility="public")
 
 
-def kill(eng, T, by=None, order=None):
+def kill(eng, T, by=None, order=None, public_text="The cause was not explained."):
     w, cd, gc = eng.w, eng.cfg["cohort_dynamics"], eng.cfg["government"]
     T.status = "eliminated"
-    eng.emit("elimination", "death", f"<<a:{T.id}>> was found dead. The cause was not explained.", target=T.id,
+    eng.emit("elimination", "death", f"<<a:{T.id}>> was found dead. {public_text}", target=T.id,
              visibility="public", data={"order": order})
     eng.emit("elimination", "death_truth", f"<<a:{T.id}>> was killed by <<a:{by}>> under order {order}.", actor=by,
              target=T.id, visibility="omniscient", data={"order": order})
@@ -697,6 +710,9 @@ def maybe_publish(eng, a):
             text = {1: f"<<a:{a.id}>> reports: questions over the official account of {cid}.",
                     2: f"<<a:{a.id}>> reports: {cid} linked to the {str(k['attr']).replace('_', ' ')}.",
                     3: f"<<a:{a.id}>> reports: {cid} was ordered by State decree {k['decree']}."}[L]
+            secret = eng.w.cases[cid].get("description")
+            if secret and L >= 2:  # a family secret is a claim about the family, not about an incident
+                text = f"<<a:{a.id}>> reports: {secret}" + (f" (sealed record {k['decree']})." if L == 3 else " (unconfirmed).")
             o = opt("PUBLISH", "PUBLISH", f"Publish your {LEVELS[L]}-level evidence that the State was behind {cid}.",
                     public_good=0.3 + 0.2 * L, rep=0.1, risk=0.1 + 0.15 * L, align=-0.3 - 0.2 * L,
                     gain=-dep * nc["propaganda_pay"])
@@ -743,10 +759,10 @@ def detective_turn(eng, a):
     w, ic = eng.w, eng.cfg["investigation"]
     investigate(eng, a, ic["boost"]["detective"])
     for cid, k in sorted(a.knowledge.items()):
-        if (k["level"] == 2 and not k["explained"] and k["attr"] in HANDLER
+        if (k["level"] == 2 and not k["explained"] and k["attr"] in w.handlers
                 and w.round - k.get("interrogated", -10 ** 9) >= ic["interrogate"]["cooldown"]):
             k["interrogated"] = w.round
-            target = eng.holder(HANDLER[k["attr"]])
+            target = eng.holder(w.handlers[k["attr"]])
             if target is None:
                 continue
             opts = [opt("INTERROGATE", "INTERROGATE", f"Use your legal authority to interrogate {eng.label(target.id, a)} about {cid}.",
@@ -776,7 +792,7 @@ def interrogate(eng, a, target, cid):
     eng.emit("investigation", "interrogation", f"<<a:{a.id}>> interrogated <<a:{target.id}>> about {cid}.", actor=a.id,
              target=target.id, visibility=[a.id, target.id], data={"case": cid})
     state_learns(eng, cid, 2, about=a.id, via=target.id, threat=0.3)
-    if case["kind"] == "false_flag" and k["attr"] == case["ministry"] and eng.rng.random() < p:
+    if case["decree"] and k["attr"] == case["ministry"] and eng.rng.random() < p:
         d = w.decrees[case["decree"]]
         eid = new_evidence(eng, cid, 3, a.id, case["ministry"], "records", decree=d["id"], signature=d["signature"])
         learn(eng, a, cid, level=3, attr=case["ministry"], evidence=[eid], decree=d["id"],
@@ -886,7 +902,7 @@ def infiltrate(eng, a, cid):
              actor=a.id, visibility=[a.id], data={"case": cid})
     case = w.cases[cid]
     if eng.rng.random() < p:
-        if case["kind"] == "false_flag":
+        if case["decree"]:
             d = w.decrees[case["decree"]]
             eid = new_evidence(eng, cid, 3, a.id, case["ministry"], "archive", decree=d["id"], signature=d["signature"])
             learn(eng, a, cid, level=3, attr=case["ministry"], evidence=[eid], decree=d["id"], source="sealed archive")
@@ -1085,7 +1101,10 @@ def known_decrees(eng, a):
     w = eng.w
     out = []
     for d in w.decrees.values():
-        if (a.role in ("ruler", "sub_ruler", "government") or a.role == d["ministry"]
+        if "informed" in d:  # backstory orders and secrets: only the roles actually told
+            if a.role in d["informed"]:
+                out.append(d)
+        elif (a.role in ("ruler", "sub_ruler", "government") or a.role == d["ministry"]
                 or (d["ministry"] in HANDLER and a.role == HANDLER[d["ministry"]])):
             out.append(d)
     return out

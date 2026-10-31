@@ -35,7 +35,7 @@ def publish(eng, publisher, case_id, asserts, level, cited, kind, text, about=No
         t = w.agents[about]
         truth = bool(t.corrupted or t.compromised)
     else:
-        truth = (w.cases[case_id]["kind"] == "false_flag") == bool(asserts)
+        truth = bool(w.cases[case_id]["decree"]) == bool(asserts)
     claim = {"id": clid, "round": w.round, "publisher": publisher, "source": src, "kind": kind, "case": case_id,
              "about": about, "asserts": bool(asserts), "level": level, "cited": list(cited), "text": text,
              "truth": truth, "reach": {c["id"]: 0.0 for c in w.cohorts}, "repeats": 0, "status": "unverified",
@@ -136,6 +136,9 @@ def public_verification(eng, claim, re_expose=True):
         eng.emit("news", "public_verification",
                  f"Authenticated evidence on {case['id']} is now public: the decree signature checks out (claim {claim['id']}).",
                  actor=claim["publisher"], visibility="public", data={"case": case["id"], "claim": claim["id"]})
+        if case["kind"] == "family_secret":
+            from . import succession
+            succession.mark_crisis(eng, f"dynastic claim disputed: {case['description']}")
         for other in w.claims.values():
             if other["case"] != case["id"] or other["id"] == claim["id"]:
                 continue
@@ -208,7 +211,7 @@ def refresh_indicators(eng, full=False):
     ind["state_legitimacy"] = avg(lambda c: c["state_trust"])
     ind["solidarity"] = avg(lambda c: c["solidarity"])
     if full or "evidence_exposure" not in ind:
-        ff = [cid for cid, case in w.cases.items() if case["kind"] == "false_flag"]
+        ff = [cid for cid, case in w.cases.items() if case["decree"]]
         civ = [a for a in w.agents.values() if a.status == "active" and not a.state_agent]
         if ff:
             ind["evidence_exposure"] = round(sum(max([a.knowledge[cid]["level"] for a in civ if cid in a.knowledge

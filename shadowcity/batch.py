@@ -144,6 +144,7 @@ def main(argv=None):
     ap.add_argument("--no-db", action="store_true")
     ap.add_argument("--events", action="store_true", help="also write events.jsonl and store full event logs")
     ap.add_argument("--label", default="baseline")
+    ap.add_argument("--like", help="copy config (incl. backstory) and premise from a saved run id")
     a = ap.parse_args(argv)
     store = None if a.no_db else Store(a.db)
     if a.mode == "compare":
@@ -160,6 +161,13 @@ def main(argv=None):
         report(rows, "Saved runs grouped by config hash")
         return
     base = runs.load_config(a.config)
+    if a.like:
+        row = Store(a.db).get_run(a.like)
+        if row is None:
+            ap.error(f"no saved run {a.like} in {a.db}")
+        base = row["config"]
+        if not a.premise:
+            a.premise, a.premise_visibility = row["premise"]["text"], row["premise"]["visibility"]
     over = runs.parse_override_text("\n".join(a.set))
     if a.provider:
         over["llm.provider"] = a.provider

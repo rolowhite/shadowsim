@@ -96,7 +96,7 @@ def summary(eng):
     ind = dict(w.indicators)
     return {"final": eng.final, "round": w.round, "milestones": {k: v["round"] for k, v in w.milestones.items()},
             "indicators": ind, "false_flags": sum(c["kind"] == "false_flag" for c in w.cases.values()),
-            "incidents": len(w.cases), "genuine_share": access.genuine_share(eng), "claims": len(w.claims),
+            "incidents": sum(c["kind"] in ("genuine", "false_flag") for c in w.cases.values()), "genuine_share": access.genuine_share(eng), "claims": len(w.claims),
             "eliminations": sum(1 for a in w.agents.values() if a.status == "eliminated"),
             "packets": len(w.legacy_queue), "dms_triggers": count("dms_trigger"), "leaks": w.counters.get("leaks", 0),
             "offers": count("offer"), "accepted": sum(1 for a in w.agents.values() if a.corrupted),

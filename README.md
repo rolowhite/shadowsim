@@ -40,6 +40,17 @@ Both windows read the same SQLite database (`data/shadowcity.db`), poll it every
 
 - **Premise** (free text) plus visibility (operator only, public, or State agents only). It is frozen at start and only enters the prompts of agents allowed to see it. **It changes no mechanics.** In fallback mode it is recorded but has no effect.
 - **Parameter overrides**, one per line, for example `incidents.genuine_per_year=0.05` or `ablation.trait_mirror=true`. Unknown paths are rejected, and the overrides are stored with the run (config hash).
+- **Backstory**: the mechanical X factor. These are events applied at round 0 that become real ground truth. Truth Audit, the casebook, outcomes and LLM prompts all see them, each according to its access rules. Add them in story order; later events refer to earlier ones by their label.
+
+| Event | Fields | What it does |
+|---|---|---|
+| person | id, name, family of | Adds someone outside the 31 (for example a victim). Family members trust each other fully |
+| secret | label, kind, the hidden truth, (staged attack: ministry), who knows it | `family_secret`: a sealed State record with no public incident, so it can only be reached through leads. `staged_attack`: a signed false flag with a public incident |
+| killing | label, victim, ordered by, responsible office, operative, official cause, motive | A public death with the announced cause, plus a signed killing order. If not ordered by Government it is marked *outside the law*, and Government is not told. Proving the order gives a lead on the motive secret |
+| destroy | by, which labels, whose papers, thoroughness 1–5 | Lowers trace visibility (never below the floor) and leaves one signed cover-up order and trace. The papers are wiped |
+| knows | who, about which label, anomaly / link / authorization, note | Gives that person knowledge; the note goes into their memory, visible only to them |
+
+Click **Load example: priest's brother** to see the X factor that motivated this form. The backstory is stored in the run's config, so Reset, resume and `batch --like <run id>` reproduce it exactly.
 
 ## Local model (optional)
 
@@ -65,6 +76,7 @@ python3 -m shadowcity.batch run --seeds 1-200 --set ablation.trait_mirror=true -
 python3 -m shadowcity.batch run --seeds 1-200 --set dms.enabled=false --label no_trap --out out/no_trap
 python3 -m shadowcity.batch sweep --params investigation.clue_rate,news.belief_rate,state_ops.target_legitimacy --factor 0.25 --seeds 1-50 --out out/oat
 python3 -m shadowcity.batch sweep --params investigation.clue_rate,news.belief_rate,state_ops.target_legitimacy --lhs 40 --seeds 1-5 --out out/lhs
+python3 -m shadowcity.batch run --seeds 1-200 --like <run id from the Control Room> --label my_x_factor --out out/x
 python3 -m shadowcity.batch compare
 ```
 

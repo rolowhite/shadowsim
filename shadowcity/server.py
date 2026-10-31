@@ -16,7 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from . import runs
-from .engine import access
+from .engine import access, scenario
 from .llm import provider as llm
 from .store import Store
 
@@ -142,6 +142,8 @@ class App:
             cfg["llm"]["provider"] = body["provider"]
         if body.get("model"):
             cfg["llm"]["model"] = body["model"]
+        if "scenario" in body:  # the backstory form; validated here, before any run exists
+            cfg["scenario"]["events"] = scenario.validate(body["scenario"] or [], cfg)
         seed = int(body.get("seed", 1))
         premise = {"text": str(body.get("premise", ""))[:2000], "visibility": body.get("premise_visibility", "operator")}
         if premise["visibility"] not in ("public", "state", "operator"):

@@ -107,6 +107,7 @@ class World:
         self.pop_avg = {t: sum(a.traits[t] for a in self.agents.values()) / len(self.agents) for t in TRAITS}
         self.cohorts = [make_cohort(c, cfg["cohort_baseline"]) for c in cfg["cohorts"]]
         self.cases, self.traces, self.decrees, self.orders = {}, {}, {}, {}
+        self.handlers = {"health_ministry": "health_impostor", "justice_ministry": "justice_impostor"}  # who to interrogate per attribution
         self.evidence, self.claims = {}, {}
         self.case_order, self.active_claims = [], []
         self.legacy_queue = []     # append-only; no code path removes entries

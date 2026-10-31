@@ -9,7 +9,7 @@ import pickle
 import random
 import re
 
-from . import access, actions, mechanics, news, outcomes, succession
+from . import access, actions, mechanics, news, outcomes, scenario, succession
 from .events import EventLog
 from .state import World, VISIBLE, LEARNER
 
@@ -54,7 +54,7 @@ class Engine:
         self.final = None
         self.w = World(cfg, self.rng)
         self.role_names = {e["role"]: e["name"] for e in cfg["roster"]}
-        self.role_names.update({"learner": "Learner", "heir": "Ruler's Heir"})
+        self.role_names.update({"learner": "Learner", "heir": "Ruler's Heir", "citizen": "Citizen"})
         self.codes = {}
         ids = list(self.w.agents)
         random.Random(f"codes:{self.seed}").shuffle(ids)
@@ -62,6 +62,7 @@ class Engine:
             self.codename(aid)
         mechanics.setup(self)
         succession.create_heir(self)
+        scenario.apply(self)  # the researcher's backstory, after the heir exists
         news.refresh_indicators(self, full=True)
 
     # ---------- identity and rendering ----------

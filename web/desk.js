@@ -105,7 +105,8 @@ function render() {
   const nf = items.filter((n) => n.fact ? passes(n.round, "fact", n.case, "", `${n.case} incident ${n.official_cause}`)
     : passes(n.round, n.source, n.case, n.status, `${n.id} ${n.text} ${n.publisher} ${n.case}`));
   nf.sort((a, b) => b.round - a.round);
-  $("#news").innerHTML = nf.slice(0, 400).map((n) => n.fact ? `<div class="item"><div class="hd"><span class="mono">${esc(n.case)} · r${n.round}</span>${badge("fact", "b-fact")}</div>
+  const more = nf.length > 400 ? `<p class="muted">Showing the newest 400 of ${nf.length}. Use the filters to see older items.</p>` : "";
+  $("#news").innerHTML = more + nf.slice(0, 400).map((n) => n.fact ? `<div class="item"><div class="hd"><span class="mono">${esc(n.case)} · r${n.round}</span>${badge("fact", "b-fact")}</div>
       <div class="tx">Incident ${esc(n.case)} occurred. Official cause given: ${esc(n.official_cause.replaceAll("_", " "))}.</div>${truthLine(n.case, null)}</div>`
     : `<div class="item" id="${n.id}"><div class="hd"><span class="mono">${n.id} · r${n.round}</span>${badge(...(KIND_BADGE[n.kind] || ["agent claim", "b-claim"]))}
       ${statusBadge(n.status)} <span>by ${esc(n.publisher)} (${esc(n.source.replaceAll("_", " "))})</span></div>

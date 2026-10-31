@@ -212,6 +212,19 @@ Per run, on average: 2.2 false flags, 5.2 incidents, 3.7 eliminations, 0.65 Dead
 
 **Read this carefully:** under the defaults, dark age, change without verified truth and State crisis never occurred. They are reachable (the tests construct each one) and may appear under other settings: higher fear shocks, a weaker heir bar, more aggressive repression, fewer Learners. Run the sweeps before treating any share as a property of the scenario rather than of these defaults.
 
+## 11b. Backstory (the researcher's X factor)
+
+Backstory events (`config.scenario.events`, entered in the Control Room) run at round 0, after the standing order, the initial false flag and the heir. They are logged with `decided_by: scenario_setup`. `engine/scenario.py` validates them before a run is created and rejects anything it cannot apply.
+
+- **State act = a case with a signed record.** False flags, killing orders and family secrets all keep an HMAC-signed record in the decree registry. Investigation, claims' ground truth, exposure, outcomes and the archive trap treat them alike. Baseline runs are unchanged (same hashes before and after this feature).
+- **Killing orders** are marked `extra_legal` when not issued by Government, and list exactly who was informed. Insiders can leak only orders they were told about. The trace uses the false-flag visibility formula with scope 1, one or two handlers, no witnesses and no execution error. The official cause is announced as an incident. If the operative differs from the responsible office, a Detective holding a correct link can interrogate that operative.
+- **Motive chain:** authenticating a killing order (level 3) gives a link-level lead on its motive case. This is the only built-in route from a death to a sealed secret.
+- **Family secrets** have no public incident, so nobody starts investigating them. They are reachable only through leads (the motive chain, a leak, sharing, inheritance). Proof needs the sealed record, obtained by the archive break-in (which fires the Dead Man's Switch), an insider leak or the legacy packet. Interrogation has no handler for them. Trace visibility is `scenario_defaults.secret_visibility` (0.06) and the cohort prior is 0.1. A family secret that is **publicly verified** triggers the `state_crisis` milestone ("dynastic claim disputed").
+- **Destroy** applies the cover-up rule `passes` times inside **one** signed order with **one** new trace, so burning more thoroughly never creates more evidence. Traces never go below their floor.
+- **Assumption:** an added person gets population-average traits. Family members get trust and bond 1.0. The 31 visible agents stay 31.
+
+The first backstory was the priest's brother: the Ruler secretly ordered the Sub-Ruler to kill him because he knew the heir is not of the bloodline; his papers were burned; the death was announced as an accident; the Priest found the body and knows only that something is wrong.
+
 ## 12. Assumptions still open (all configurable)
 
 - Every utility weight and the noise level.

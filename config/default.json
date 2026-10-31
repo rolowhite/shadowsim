@@ -369,7 +369,13 @@
   "base_fear": 0.15,
   "scenario": {
     "initial_false_flag": true,
-    "initial_false_flag_ministry": "health_ministry"
+    "initial_false_flag_ministry": "health_ministry",
+    "events": []
+  },
+  "scenario_defaults": {
+    "_note": "used by backstory events entered in the Control Room",
+    "secret_visibility": 0.06,
+    "secret_prior": 0.1
   },
   "incidents": {
     "genuine_per_year": 0.025,
@@ -847,7 +853,8 @@
     "wise_man_teacher": "senior teacher",
     "truth_seeker": "private citizen",
     "learner": "student",
-    "heir": "member of the ruling family"
+    "heir": "member of the ruling family",
+    "citizen": "citizen"
   },
   "indicator_help": {
     "public_trust": "Generalized trust: how far citizens trust each other and institutions in general (cohort-weighted mean). Falls with rumors and contradictions, rises when claims are resolved by evidence.",
