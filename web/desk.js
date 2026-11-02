@@ -26,6 +26,7 @@ function setRun(id) {
   runId = id;
   history.replaceState(null, "", "/desk?run=" + id);
   $("#exportBtn").href = `/api/runs/${id}/export`;
+  setCsvLinks();
   $("#controlLink").href = `/control?run=${id}`;
   desk = null; truth = null; lastUpdated = null;
   const d = lsGet("sc.draft." + id, null);
@@ -37,8 +38,15 @@ async function toggleTruth() {
   truthOn = !truthOn;
   $("#truthToggle").setAttribute("aria-pressed", truthOn);
   $("#truthToggle").textContent = truthOn ? "Truth Audit: ON (ground truth shown)" : "Truth Audit: OFF";
+  setCsvLinks();
   truth = truthOn ? await api(`runs/${runId}/desk/audit`).catch(() => null) : null;
   render();
+}
+
+function setCsvLinks() {
+  $("#csvCasebook").href = `/api/runs/${runId}/csv/casebook`;
+  $("#csvNews").href = `/api/runs/${runId}/csv/news${truthOn ? "?audit=1" : ""}`;
+  $("#csvNews").textContent = truthOn ? "CSV (with Truth Audit)" : "CSV";
 }
 
 async function tick() {

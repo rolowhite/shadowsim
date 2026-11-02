@@ -5,6 +5,8 @@
 Both windows read the same SQLite database, so they stay in sync and survive refreshes and restarts.
 """
 import argparse
+import csv
+import io
 import json
 import pathlib
 import re
@@ -294,6 +296,18 @@ class Handler(BaseHTTPRequestHandler):
             if method == "DELETE" and len(sub) == 2:
                 st.delete_note(rid, int(sub[1]))
                 return self.send(200, {"ok": True})
+        if len(sub) == 2 and sub[0] == "csv":
+            cats = [c for c in q.get("cat", "").split(",") if c] or None
+            data = csv_export(st, rid, sub[1], q.get("audit") == "1", cats)
+            if data is None:
+                return self.send(404, {"error": "csv kind must be casebook, news or timeline"})
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", f'attachment; filename="{rid}-{sub[1]}.csv"')
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
         if sub == ["export"]:
             full = st.get_run(rid)
             out = {"run": full, "events": st.events(rid, 0, 10 ** 9, include_omniscient=True), "notes": st.notes(rid),
@@ -308,6 +322,41 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(data)
             return
         self.send(404, {"error": "unknown endpoint"})
+
+
+def csv_export(st, rid, kind, audit=False, cats=None):
+    """CSV for one window's data. Same access rules as the windows: ground truth only with audit."""
+    j = lambda v: ";".join(map(str, v)) if isinstance(v, list) else v  # noqa: E731
+    desk = st.get_view(rid, "desk")[0] or {"casebook": [], "news": [], "incidents": []}
+    if kind == "casebook":
+        cols = ["id", "round", "source", "finding", "case", "claim", "evidence", "confidence", "status", "basis", "event"]
+        rows = [[j(e.get(c)) for c in cols] for e in desk["casebook"]]
+    elif kind == "news":
+        cols = ["id", "round", "type", "kind", "publisher", "source", "case", "about", "asserts_state_involved", "level",
+                "cited", "reach", "repeats", "status", "event", "text"]
+        items = [{"id": i["case"], "round": i["round"], "type": "fact", "kind": "incident", "case": i["case"],
+                  "event": i["event"], "text": f"Incident {i['case']}. Official cause: {i['official_cause'].replace('_', ' ')}."}
+                 for i in desk["incidents"]] + desk["news"]
+        items.sort(key=lambda x: (x["round"], x["id"]))
+        rows = [[j(x.get(c)) for c in cols] for x in items]
+        if audit:
+            truth = st.get_view(rid, "desk_audit")[0] or {"claims": {}, "cases": {}}
+            cols += ["truth_audit_claim_true", "truth_audit_case_true_cause"]
+            for r, x in zip(rows, items):
+                cl, case = truth["claims"].get(x["id"]), truth["cases"].get(x.get("case") or "")
+                r += [cl["truth"] if cl else "", case["true_cause"] if case else ""]
+    elif kind == "timeline":
+        cols = ["seq", "id", "round", "year", "category", "type", "actor", "target", "visibility", "decided_by", "text"]
+        rows = [[e["seq"], e["id"], e["round"], round(e["round"] / 52, 2), e["category"], e["type"], e["actor"], e["target"],
+                 e["visibility"] if isinstance(e["visibility"], str) else "private:" + ";".join(e["visibility"]),
+                 e["decided_by"], e["text"]] for e in st.events(rid, 0, 10 ** 9, include_omniscient=audit, categories=cats)]
+    else:
+        return None
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(cols)
+    w.writerows(rows)
+    return ("\ufeff" + buf.getvalue()).encode("utf-8")  # BOM so spreadsheet apps detect UTF-8
 
 
 NARRATION = {"incident", "death", "public_verification", "state_appointment", "civil_succession", "detained",

@@ -138,3 +138,36 @@ class Persistence(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CsvExport(unittest.TestCase):
+    def test_three_csvs_respect_audit(self):
+        import csv as _csv
+        import io as _io
+        with tempfile.TemporaryDirectory() as d:
+            app = server.App(str(pathlib.Path(d) / "t.db"))
+            rid = app.create({"seed": 3})
+            r = app.runner(rid)
+            r.command("start", "max")
+            deadline = time.time() + 20
+            while app.store.get_run(rid)["round"] < 600 and time.time() < deadline:
+                time.sleep(0.1)
+            r.command("pause")
+            time.sleep(0.5)
+
+            def read(kind, audit=False):
+                data = server.csv_export(app.store, rid, kind, audit)
+                text = data.decode("utf-8")
+                self.assertTrue(text.startswith("﻿"))
+                return list(_csv.reader(_io.StringIO(text[1:])))
+
+            cb, news, tl = read("casebook"), read("news"), read("timeline")
+            self.assertEqual(cb[0][:3], ["id", "round", "source"])
+            self.assertGreater(len(news), 1)
+            self.assertFalse(any(h.startswith("truth_audit") for h in news[0]))
+            self.assertIn("truth_audit_claim_true", read("news", audit=True)[0])
+            vis = tl[0].index("visibility")
+            self.assertGreater(len(tl), 1)
+            self.assertNotIn("omniscient", {row[vis] for row in tl[1:]})
+            self.assertIn("omniscient", {row[vis] for row in read("timeline", audit=True)[1:]})
+            self.assertIsNone(server.csv_export(app.store, rid, "secrets"))

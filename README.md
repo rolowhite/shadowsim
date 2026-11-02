@@ -47,6 +47,8 @@ Both windows read the same SQLite database (`data/shadowcity.db`), poll it every
   - totals: killings, Dead Man's Switch triggers, packets, leaks and bribes
 - The Investigation Desk does not link to the chat, because the chat reveals secrets.
 
+**CSV downloads.** The Desk has a **CSV** button on the Casebook and on the News feed. The Control Room has **Download CSV** on the timeline, which exports the categories currently ticked. Each file is the full run, not just what's on screen. They follow the windows' access rules: the News CSV adds `truth_audit_*` columns only while Truth Audit is on, and the timeline includes omniscient records (decisions, true causes) only while the audit panel shows ground truth. The direct link is `/api/runs/<id>/csv/<casebook|news|timeline>[?audit=1][&cat=a,b]`.
+
 **Truth Audit.** The Desk's normal endpoint never sends ground truth. Switching Truth Audit on calls a separate endpoint and marks each claim TRUE or FALSE, along with the true cause of each incident, in a red stripe. Without it, a claim's status is only the Detective's assessment. It reads **verified** only when the Detective holds a decree whose signature checks out.
 
 ### The X factor

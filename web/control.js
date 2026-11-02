@@ -117,7 +117,15 @@ function agentRow(a) {
     ${beliefs ? `<div class="beliefs">${beliefs}</div>` : ""}</div>`;
 }
 
+function setCsvLink() {
+  if (!runId) return;
+  const cats = Object.keys(catOn).filter((c) => catOn[c]).concat(showAudit ? ["decision"] : []);
+  $("#csvTimeline").href = `/api/runs/${runId}/csv/timeline?cat=${cats.join(",")}${showAudit ? "&audit=1" : ""}`;
+  $("#csvTimeline").textContent = showAudit ? "Download CSV (with ground truth)" : "Download CSV";
+}
+
 function renderTimeline() {
+  setCsvLink();
   const shown = events.filter((e) => catOn[e.category] || (showAudit && e.category === "decision"));
   $("#evCount").textContent = `${shown.length} shown`;
   $("#timeline").innerHTML = shown.slice(-400).reverse().map((e) => `<div class="ev"><span class="r">${e.id} · r${e.round}</span>${badge(e.category, "b-muted")} ${visBadge(e.visibility)}
