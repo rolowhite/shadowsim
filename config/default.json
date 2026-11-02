@@ -378,7 +378,7 @@
     "secret_prior": 0.1
   },
   "incidents": {
-    "genuine_per_year": 0.025,
+    "genuine_per_year": 0.018,
     "genuine_kinds": {
       "accident": 0.5,
       "dissident_attack": 0.3,
@@ -394,7 +394,7 @@
     "solidarity_shock": -0.02,
     "prior_state_involved": 0.25,
     "prior_distrust_weight": 0.3,
-    "_calibration": "genuine_per_year set so about half of incidents are genuine in 40-seed fallback baseline runs (realized share is reported per run)"
+    "_calibration": "genuine_per_year set so about half of incidents are genuine in fallback baseline runs (re-tuned after conversations were added; realized share is reported per run)"
   },
   "state_ops": {
     "review_every": 26,
@@ -757,7 +757,8 @@
       "info": 0.6,
       "reputation": 0.3,
       "ally": 0.4,
-      "effort": 0.3
+      "effort": 0.3,
+      "advice": 0.6
     },
     "noise_sd": 0.25
   },
@@ -810,7 +811,19 @@
       "disclose",
       "publish",
       "propaganda",
-      "state_leak"
+      "state_leak",
+      "advise_ruler_decree",
+      "advise_ruler_policy",
+      "advise_gov_operation",
+      "advise_gov_threat",
+      "advise_gov_offer",
+      "advise_gov_cover_up",
+      "advise_learner_offer",
+      "advise_pressure_response",
+      "advise_ts_probe",
+      "advise_disclose",
+      "advise_propaganda",
+      "interrogation_reply"
     ]
   },
   "prompt_cards": {
@@ -864,5 +877,11 @@
     "evidence_exposure": "Ground-truth measure: for State false flags, the deepest evidence level (0 none, 1 anomaly, 2 link, 3 authorization) held by any active non-State agent, averaged over operations and scaled to 0-1.",
     "solidarity": "Cohort-weighted solidarity: willingness of citizens to stand together. Raised by mentors and backlash, lowered by fear and blame narratives.",
     "succession_readiness": "Share of the five civil roles (Detective, Truth Seeker, Wise Man Teacher, Priest, Real Journalist) that have at least one eligible Learner who could succeed them."
+  },
+  "talk": {
+    "_note": "confiding: listener believes with p = clamp(accept_base + accept_trust*trust + accept_level*level)",
+    "accept_base": 0.2,
+    "accept_trust": 0.7,
+    "accept_level": 0.1
   }
 }

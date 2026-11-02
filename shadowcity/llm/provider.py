@@ -131,10 +131,10 @@ class LLMDecider:
                 fut = self.scheduler.submit(messages, self.cfg["temperature"], eng.seed * 100003 + req["seq"],
                                             self.cfg["max_tokens"], self.cfg["timeout_s"])
                 text = fut.result(timeout=self.cfg["timeout_s"] + 5)
-                idx, reason = prompts.parse(text, order)
+                idx, reason, say = prompts.parse(text, order)
                 call = self._record(req, eng, phash, messages, text, t0, True, None, attempt)
                 return {"key": req["options"][idx]["key"], "decided_by": f"llm:{self.provider.name}:{self.provider.model}",
-                        "reason": reason, "llm_call": call}
+                        "reason": reason, "say": say, "llm_call": call}
             except Exception as e:  # noqa: BLE001 - timeouts, bad JSON, out-of-range options
                 err = f"{type(e).__name__}: {e}"
                 self._record(req, eng, phash, messages, text, t0, False, err, attempt)
@@ -178,10 +178,10 @@ class ReplayDecider:
         self.i += 1
         if d["seq"] != req["seq"] or d["kind"] != req["kind"] or d["actor"] != req["agent"]:
             raise ReplayMismatch(f"recorded #{d['seq']} {d['kind']}/{d['actor']} vs live #{req['seq']} {req['kind']}/{req['agent']}")
-        return {"key": d["chosen"], "decided_by": d["decided_by"], "reason": d.get("reason", "")}
+        return {"key": d["chosen"], "decided_by": d["decided_by"], "reason": d.get("reason", ""), "say": d.get("say")}
 
 
 def decisions_from_events(events):
     return [{"seq": e["data"]["seq"], "kind": e["data"]["kind"], "actor": e["actor"], "chosen": e["data"]["chosen"],
-             "decided_by": e["decided_by"], "reason": e["data"].get("reason", "")}
+             "decided_by": e["decided_by"], "reason": e["data"].get("reason", ""), "say": e["data"].get("say")}
             for e in events if e["category"] == "decision"]

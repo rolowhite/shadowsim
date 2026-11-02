@@ -17,10 +17,11 @@ Then open **http://127.0.0.1:8765/control** (the Simulation Control Room).
 1. In **New run (X factor)**, set a seed, an optional premise, and optional parameter overrides. Click **Create run**.
 2. Click **Start**. You can also **Pause**, **Resume**, **Advance 1 round**, change **Speed** or **Reset**.
 3. Click **Open Investigation Desk**. It opens a second window at `/desk?run=<id>` on the same run.
+4. Click **Open Story Chat**. It opens a third window at `/chat?run=<id>`: the run told as a conversation, ending with a verdict.
 
 Both windows read the same SQLite database (`data/shadowcity.db`), poll it every 1–1.5 s and show the same run ID. Refreshing or reopening either window loses nothing. If the server restarts, a run resumes by replaying its recorded decisions, and the server checks that the event hash chain comes out identical before continuing.
 
-### The two windows
+### The windows
 
 | Simulation Control Room (`/control`) | Investigation Desk (`/desk`) |
 |---|---|
@@ -33,6 +34,18 @@ Both windows read the same SQLite database (`data/shadowcity.db`), poll it every
 | Runs page (`/runs`): outcome counts per configuration with 95% CIs | Export: run settings, all events, notes, metrics, LLM calls |
 
 **Notes never affect the simulation.** They live in their own table, and the engine package imports nothing that could read them (a test enforces this).
+
+**Story Chat (`/chat`).** Every conversation in the run as chat bubbles. The Sub-Ruler advises Government, Government replies ("No. Warn them instead."), friends advise a bribed Learner, the Detective questions an officer, people confide in each other and are believed or doubted. Public statements, reports and rumors appear on the right; story beats (incidents, deaths, appointments, detentions) appear as narration.
+- **It is an operator view.** It includes private conversations, each badged **private**; untick *private talk* to see only what the city heard.
+- Every line is badged **scripted** (a template rendered from what the agent decided, as in fallback mode) or **LLM** (written by the model).
+- Filters: person, words, round range, and *mentoring chatter* (off by default).
+- When the run ends, a **Verdict** card summarizes it:
+  - whether anyone outside the State discovered the Ruler's signed records: who got furthest, with their role at the time and the round
+  - for each secret, how far anyone got and whether it was publicly proven
+  - who the public found out about, and who was detained
+  - every Ruler, Sub-Ruler and Government term: where the holder came from, from which round to which, how it ended, and whether they were caught. "Government changed N times, caught M times" means named in a publicly proven record.
+  - totals: killings, Dead Man's Switch triggers, packets, leaks and bribes
+- The Investigation Desk does not link to the chat, because the chat reveals secrets.
 
 **Truth Audit.** The Desk's normal endpoint never sends ground truth. Switching Truth Audit on calls a separate endpoint and marks each claim TRUE or FALSE, along with the true cause of each incident, in a red stripe. Without it, a claim's status is only the Detective's assessment. It reads **verified** only when the Detective holds a decree whose signature checks out.
 
@@ -90,7 +103,7 @@ A fallback run of 6000 rounds takes a few seconds. An LLM run takes far longer: 
 python3 -m unittest discover tests -v
 ```
 
-There are 31 tests. They cover:
+There are 49 tests. They cover:
 - the roster
 - determinism and replay
 - information access (no ground truth in prompts or on the Desk)
@@ -106,6 +119,9 @@ There are 31 tests. They cover:
 - the Ollama HTTP path against a stub server
 - notes CRUD
 - restart resume
+- conversations: advice that is followed or overridden ("No."), LLM lines, doubt when trust is low, confession and misleading under interrogation
+- detention after a change of control
+- the verdict
 
 ## Architecture
 
@@ -120,12 +136,15 @@ shadowcity/engine/         pure simulation: no I/O, no wall clock in mechanics, 
   succession.py            State succession on death; 500-round civil checkpoint
   outcomes.py              milestones and final-label precedence
   access.py                per-agent observation, Desk view, Truth Audit, Control view, Omniscient audit
-  engine.py                round loop, shared utility, decision plumbing, snapshot/restore
+  talk.py                  speech acts and line templates (advice, replies, confiding, threats, offers)
+  verdict.py               the end-of-run verdict
+  scenario.py              the Backstory (X factor) events
+  engine.py                round loop, shared utility, decision plumbing (with advice), snapshot/restore
 shadowcity/llm/            provider interface (Ollama, OpenAI-compatible), queue, prompts, replay
 shadowcity/store.py        SQLite: runs, events, views, metrics, notes, llm_calls
 shadowcity/server.py       stdlib HTTP server, JSON API, background runner per run
 shadowcity/batch.py        batches, one-at-a-time and Latin-hypercube sweeps, comparison
-web/                       control.html/js, desk.html/js, runs.html, app.css (vanilla, no build)
+web/                       control.html/js, desk.html/js, chat.html/js, runs.html, app.css (vanilla, no build)
 ```
 
 The engine decides everything. Deciders (LLM, fallback, replay) only choose one option from a list the engine builds, and the engine re-validates the choice against the agent's authority. Agents see the world only through `access.observation()`. That covers their own evidence, events visible to them (with cover identities and neutral codenames), the premise if it is visible to them, and for State agents their own channel.

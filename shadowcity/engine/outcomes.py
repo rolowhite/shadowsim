@@ -75,6 +75,27 @@ def change_of_control(eng, name):
     mark(eng, name)
     eng.emit("government", "change_of_control", "Change of control: the State's coercive authority is suspended and "
              "public institutions are reorganized.", visibility="public", data={"path": name})
+    detain_implicated(eng)
+
+
+NAMED = ("issued_by", "proposed_by", "executor", "handler")
+
+
+def detain_implicated(eng):
+    """After a change of control, officials named in a publicly proven signed record are detained."""
+    w = eng.w
+    if w.regime == "incumbent":
+        return
+    for cid, case in w.cases.items():
+        if not (case["publicly_verified"] and case["decree"]):
+            continue
+        d = w.decrees[case["decree"]]
+        for f in NAMED:
+            a = w.agents.get(d.get(f) or "")
+            if a and a.status in ("active", "hiding") and a.state_agent:
+                a.status = "detained"
+                eng.emit("government", "detained", f"<<a:{a.id}>> was detained: named in the proven record behind {cid}.",
+                         target=a.id, visibility="public", data={"case": cid, "decree": d["id"], "as": f})
 
 
 def check(eng):
@@ -124,4 +145,8 @@ def finalize(eng):
         label = "unresolved"
     eng.emit("system", "final_outcome", f"Run ended at round {w.round}: {label.replace('_', ' ')}.", visibility="public",
              data={"label": label, "milestones": {k: v["round"] for k, v in m.items()}})
+    from . import verdict
+    eng.verdict = verdict.build(eng, label)
+    for i, text in enumerate(eng.verdict):
+        eng.emit("conversation", "verdict", text, visibility="omniscient", data={"line": i, "say": eng.render(text)})
     return label

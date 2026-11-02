@@ -197,7 +197,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Location", "/control")
                 self.end_headers()
                 return
-            if method == "GET" and u.path in ("/control", "/desk", "/runs"):
+            if method == "GET" and u.path in ("/control", "/desk", "/runs", "/chat"):
                 return self.send(200, (WEB / f"{u.path[1:]}.html").read_bytes(), TYPES[".html"])
             if method == "GET" and u.path.startswith("/static/"):
                 p = (WEB / u.path[len("/static/"):]).resolve()
@@ -268,6 +268,9 @@ class Handler(BaseHTTPRequestHandler):
             cats = [c for c in q.get("cat", "").split(",") if c] or None
             return self.send(200, st.events(rid, int(q.get("since", 0)), min(int(q.get("limit", 500)), 2000),
                                             include_omniscient=q.get("audit") == "1", categories=cats))
+        if sub == ["chat"]:
+            lines, nxt = chat_lines(st, rid, int(q.get("since", 0)))
+            return self.send(200, {"run": meta, "lines": lines, "next": nxt})
         if sub == ["audit"]:
             return self.send(200, st.get_view(rid, "audit")[0])
         if sub == ["desk"]:
@@ -305,6 +308,37 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(data)
             return
         self.send(404, {"error": "unknown endpoint"})
+
+
+NARRATION = {"incident", "death", "public_verification", "state_appointment", "civil_succession", "detained",
+             "change_of_control", "milestone", "dismissal", "retired", "succession_failed", "final_outcome",
+             "legacy_packet", "packet_delivered", "decree", "claim", "backstory_person"}
+
+
+def chat_lines(st, rid, since, limit=5000):
+    """Story Chat feed: spoken lines plus the events that move the story. Operator view: includes private talk."""
+    rows = st.events(rid, since, limit, include_omniscient=True)
+    view = st.get_view(rid, "control")[0] or {}
+    labels = {a["id"]: a["label"] for a in view.get("roster", [])}
+    out = []
+    for e in rows:
+        d, vis = e["data"], e["visibility"]
+        base = {"seq": e["seq"], "id": e["id"], "round": e["round"], "private": vis != "public",
+                "visibility": vis if isinstance(vis, str) else "private"}
+        if e["category"] == "conversation":
+            if e["type"] == "verdict":
+                out.append(dict(base, kind="verdict", text=d.get("say", e["text"])))
+                continue
+            spk = e["text"].split(": \u201c", 1)[0]
+            out.append(dict(base, kind="line", speaker=e["actor"], speaker_label=spk, act=d.get("act"), source=d.get("source"),
+                            to=[labels.get(x, x) for x in d.get("to", [])], public=d.get("public", False), text=d.get("say", "")))
+        elif e["type"] in NARRATION:
+            if e["type"] == "claim":
+                out.append(dict(base, kind="claim", speaker=e["actor"], speaker_label=labels.get(e["actor"], e["actor"] or "street"),
+                                source=d.get("source"), claim_kind=d.get("kind"), text=e["text"]))
+            else:
+                out.append(dict(base, kind="narration", type=e["type"], text=e["text"]))
+    return out, rows[-1]["seq"] if rows else since
 
 
 def compare(rows):

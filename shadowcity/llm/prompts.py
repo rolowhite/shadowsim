@@ -11,7 +11,8 @@ import re
 from ..engine import access
 
 SYSTEM = ("You are one person in a simulated city. Decide as that person would, given their situation and "
-          "tendencies. Reply with JSON only, no other text: {\"option\": <number>, \"reason\": \"<at most 20 words>\"}")
+          "tendencies. Reply with JSON only, no other text: {\"option\": <number>, \"say\": \"<what you say out loud, "
+          "at most 25 words>\", \"reason\": \"<at most 20 words>\"}")
 
 
 def level_word(x):
@@ -62,7 +63,11 @@ def build(eng, req):
     lines.append("Options:")
     for i, j in enumerate(order, 1):
         lines.append(f"{i}. {eng.render(req['options'][j]['text'], viewer=a)}")
-    lines.append("Which option do you choose?")
+    if req.get("listener"):
+        who = eng.label(req["listener"], viewer=a)
+        lines.append(f"You are advising {who}: pick the option you recommend to them." if req["kind"].startswith("advise_")
+                     else f"You are speaking with {who}.")
+    lines.append("Which option do you choose, and what do you say?")
     return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": "\n".join(lines)}], order
 
 
@@ -70,7 +75,7 @@ JSON_RE = re.compile(r"\{.*?\}", re.S)
 
 
 def parse(text, order):
-    """Return (option index into req['options'], reason) or raise ValueError."""
+    """Return (option index into req['options'], reason, say) or raise ValueError."""
     m = JSON_RE.search(text or "")
     if not m:
         raise ValueError("no JSON object in reply")
@@ -78,4 +83,4 @@ def parse(text, order):
     n = int(obj["option"])
     if not 1 <= n <= len(order):
         raise ValueError(f"option {n} out of range")
-    return order[n - 1], str(obj.get("reason", ""))[:200]
+    return order[n - 1], str(obj.get("reason", ""))[:200], " ".join(str(obj.get("say", "")).split())[:240]

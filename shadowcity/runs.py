@@ -102,7 +102,8 @@ def summary(eng):
             "offers": count("offer"), "accepted": sum(1 for a in w.agents.values() if a.corrupted),
             "feigned": sum(1 for a in w.agents.values() if a.double_agent),
             "succession_failures": w.succession_failures, "regime": w.regime,
-            "decided_by": {k.split(":", 1)[1]: v for k, v in w.counters.items() if k.startswith("decided_by:")}}
+            "decided_by": {k.split(":", 1)[1]: v for k, v in w.counters.items() if k.startswith("decided_by:")},
+            "verdict": [eng.render(x) for x in eng.verdict]}
 
 
 def wilson(k, n, z=1.96):

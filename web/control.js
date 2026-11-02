@@ -23,6 +23,7 @@ async function init() {
   };
   $("#speed").onchange = () => control(null);
   $("#openDesk").onclick = () => window.open("/desk?run=" + runId, "shadowcity-desk");
+  $("#openChat").onclick = () => window.open("/chat?run=" + runId, "shadowcity-chat");
   $("#bCreate").onclick = createRun;
   $("#prov").onchange = checkModel;
   $("#auditToggle").onclick = () => { showAudit = !showAudit; $("#auditToggle").setAttribute("aria-pressed", showAudit); $("#auditToggle").textContent = showAudit ? "Hide ground truth" : "Show ground truth"; $("#audit").hidden = !showAudit; since = 0; events = []; if (showAudit) loadAudit(); };
@@ -77,6 +78,7 @@ function renderMeta(s) {
   const prov = r.provider || {};
   const llm = prov.kind && prov.kind !== "fallback";
   $("#openDesk").disabled = false;
+  $("#openChat").disabled = false;
   $("#meta").innerHTML = `<span>Run <b class="mono">${esc(r.id)}</b></span><span>Seed <b>${r.seed}</b></span>
     <span>Round <b>${r.round}</b> (year ${(r.round / 52).toFixed(1)})</span><span>Epoch <b>${v.epoch ?? 0}</b> (500 rounds each)</span>
     <span>Status <b>${esc(r.status)}</b></span>

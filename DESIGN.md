@@ -95,6 +95,27 @@ Government's threat response to the top threat (≥ 0.6, every 52 rounds) can be
 
 **Mentorship and social influence.** The Priest and the Wise Man Teacher mentor Learners: bond, trust, growth, and the Learner's loyalty moves toward **the mentor's own** loyalty. They also push their cohort's State trust toward their own stance. A Priest can preach obedience. The Education Ministry pushes curriculum and pressures a dissenting Teacher. No role improves people by definition.
 
+**Conversations (talk changes behavior).** Speech is a set of acts with mechanical effects. The words are flavor: templates in `engine/talk.py` (labeled `scripted`), or the LLM's own `say` line (labeled `llm`). Eloquence never changes an outcome; only the act and these rules do. Template variants are picked by hashing, so talk never consumes the simulation RNG.
+- **Advice.** Before these decisions an advisor runs the **same options through their own shared utility** (decision kind `advise_<kind>`) and says what they recommend. The advised option then gets `advised = trust(decider→advisor)·(0.5 + 0.5·advisor.Man/10)`, weighted by `utility.weights.advice` (0.6). The decider replies; an override starts with "No."
+
+  | Decision | Advisor |
+  |---|---|
+  | gov_threat, ruler_decree | Sub-Ruler |
+  | ruler_policy | Government |
+  | gov_operation | the executing minister |
+  | gov_offer | Learner Impostor |
+  | gov_cover_up | Justice Ministry |
+  | propaganda | the businessman |
+  | a Learner's bribe, anyone's response to threats, the Truth Seeker's break-in choice, disclosure | that person's most trusted non-State contact |
+
+  Advice runs on both sides, by the same formula.
+- **Confiding can be doubted.** When someone tells another person something new, the listener believes it with p = clamp(0.2 + 0.7·trust(listener→speaker) + 0.1·level) (`talk.*`). If they doubt it, nothing is learned and trust drops by 0.02. If they believe it, knowledge passes as before. Inheritance, packets, leaked documents and backstory are not gated. Telling someone what they already know produces no conversation.
+- **Interrogation reply.** The questioned officer chooses:
+  - STONEWALL: the existing records roll.
+  - MISLEAD: succeeds with p = Man/10·(1 − Ana_detective/20) and diverts the Detective's link to another ministry. A failed lie multiplies the records roll by 1.5.
+  - CONFESS: the signed record for a State act, or a truthful "nothing happened" for a genuine incident. The officer's loyalty drops by 0.2 and the State is alerted.
+- Offers, threats, warnings, smear requests, proposals, leaks, unmasking warnings, impostor reports, mentoring, the archive break-in and the DMS also produce lines, but no new effects.
+
 ## 6. News and belief
 
 A claim stores hidden `truth`, publisher, source type, cited evidence, per-cohort reach, repeats, and the Detective's status, all separately.
@@ -161,7 +182,11 @@ Rumors arrive at 4 per year.
 6. resistance survives, unresolved
 7. unresolved
 
-After a change of control, State coercive actions are refused by the validator.
+After a change of control, State coercive actions are refused by the validator, and **officials named in a publicly proven signed record are detained** (issuer, proposer, executor, operative). This also applies to records proven later. Detained officials cannot act, and their seats are not refilled.
+
+**Verdict.** At the end of the run, `engine/verdict.py` writes a plain-language summary from the event log and the final state. It is posted in the Story Chat and stored in the run summary.
+- **"Discovered the Ruler"** means someone outside the State reached authorization (the signed record) on a record the Ruler signed. Knowledge given by the backstory is listed separately, never counted as a discovery.
+- **Terms** are rebuilt from each agent's role history. **"Caught"** means named in a publicly proven record.
 
 ## 9. LLM integration
 
@@ -173,7 +198,7 @@ The provider interface supports Ollama and OpenAI-compatible endpoints. One inst
 - the agent's evidence and recent visible events
 - options shuffled with a seed per decision
 
-The reply must be JSON `{option, reason}`. Every call is logged. Strict and lenient failure handling is described in the README. Replay reproduces any run from its recorded decisions.
+The reply must be JSON `{option, say, reason}`; `say` becomes the agent's spoken line in the Story Chat. Advisors get the same options with "You are advising X". Every call is logged. Strict and lenient failure handling is described in the README. Replay reproduces any run from its recorded decisions.
 
 ## 10. Bias controls
 
@@ -195,22 +220,24 @@ The reply must be JSON `{option, reason}`. Every call is logged. Strict and leni
 
 ## 11. Calibration and the baseline
 
-**Only one target was calibrated:** `incidents.genuine_per_year = 0.025`, set so that about half of incidents are genuine in fallback baseline runs (realized share over 100 seeds: 0.58). Everything else comes from the stated assumptions above, not from tuning toward any outcome mix.
+**Only one target was calibrated:** `incidents.genuine_per_year`, set so that about half of incidents are genuine in fallback baseline runs. It was re-tuned to 0.018 after conversations were added, because advisors temper the State and fewer staged attacks raised the genuine share. Realized share over 100 seeds: 0.52. Everything else comes from the stated assumptions above, not from tuning toward any outcome mix.
 
-**Baseline, fallback, seeds 1–100** (code at the commit that added this file):
+**Baseline with conversations, fallback, seeds 1–100** (code at the commit that added conversations):
 
-| Final label | Share | 95% CI |
-|---|---:|---|
-| verified disclosure changed control | 22% | 15–31% |
-| truth public | 31% | 23–41% |
-| State retains | 36% | 27–46% |
-| resistance survives, unresolved | 11% | 6–19% |
-| change without verified truth, dark age, unresolved | 0% | — |
+| Final label | Default world | 95% CI | Priest's brother backstory | 95% CI |
+|---|---:|---|---:|---|
+| verified disclosure changed control | 19% | 13–28% | 15% | 9–23% |
+| truth public | 20% | 13–29% | 39% | 30–49% |
+| State retains | 52% | 42–62% | 37% | 28–47% |
+| resistance survives, unresolved | 9% | 5–16% | 9% | 5–16% |
+| change without verified truth, dark age, unresolved | 0% | — | 0% | — |
 
-Milestones: truth verified public 59%, investigation suppressed 4%, State crisis 0%, civil dark age 0%.
-Per run, on average: 2.2 false flags, 5.2 incidents, 3.7 eliminations, 0.65 Dead Man's Switch triggers, 5.7 failed civil successions.
+Milestones (default world): truth verified public 41%, investigation suppressed 3%, State crisis 0%, civil dark age 0%. With the backstory, State crisis reached 7%.
+Per run, on average (default world): 1.5 staged attacks, 3.4 incidents, 2.8 eliminations, 0.38 Dead Man's Switch triggers, 0.36 leaks, 5.3 failed civil successions.
 
-**Read this carefully:** under the defaults, dark age, change without verified truth and State crisis never occurred. They are reachable (the tests construct each one) and may appear under other settings: higher fear shocks, a weaker heir bar, more aggressive repression, fewer Learners. Run the sweeps before treating any share as a property of the scenario rather than of these defaults.
+Before conversations existed, the same default world gave 22% / 31% / 36% / 11%. With advice, State insiders talk each other out of some operations (2.2 → 1.5 staged attacks per run), and listeners doubt some confidences. The net result is less truth reaching the public. **Results from before and after conversations are not comparable** (different code version, recorded in every run).
+
+**Read this carefully:** under the defaults, dark age and change without verified truth never occurred. They are reachable (the tests construct each one) and may appear under other settings: higher fear shocks, a weaker heir bar, more aggressive repression, fewer Learners. Run the sweeps before treating any share as a property of the scenario rather than of these defaults.
 
 ## 11b. Backstory (the researcher's X factor)
 

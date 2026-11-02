@@ -3,7 +3,7 @@
 Abilities (int/ana/sec/man) only appear in success odds here. Motives (cur/greed) only appear in
 decision utilities (engine.utility). Every probability's inputs come from config.
 """
-from . import actions, news
+from . import actions, news, talk
 from .events import sign, verify
 from .state import IMPOSTORS, MINISTRIES, LEARNER, VISIBLE
 
@@ -367,7 +367,20 @@ def best_contact(eng, a, roles=None, min_trust=None):
 
 
 def share(eng, a, b, cid, how="SHARE"):
-    k = a.knowledge[cid]
+    """Confiding is a conversation: the listener may doubt it (talk.accept_*), and then learns nothing."""
+    k, tc = a.knowledge[cid], eng.cfg["talk"]
+    kb = b.knowledge.get(cid)
+    news_for_b = kb is None or kb["level"] < k["level"] or (k["explained"] and not kb["explained"])
+    if news_for_b:
+        talk.confide(eng, a, b, cid, k)
+        p = clamp(tc["accept_base"] + tc["accept_trust"] * b.t(a.id) + tc["accept_level"] * k["level"])
+        if eng.rng.random() >= p:
+            talk.say(eng, b.id, [a.id], "doubt")
+            b.trust[a.id] = clamp(b.t(a.id) - 0.02)
+            eng.emit("investigation", "doubted", f"<<a:{b.id}>> did not believe <<a:{a.id}>> about {cid}.",
+                     actor=b.id, target=a.id, visibility=[a.id, b.id], data={"case": cid, "level": k["level"]})
+            return
+        talk.say(eng, b.id, [a.id], "believe")
     eng.emit("investigation", "shared", f"<<a:{a.id}>> shared what they know about {cid} with <<a:{b.id}>>.",
              actor=a.id, target=b.id, visibility=[a.id, b.id], data={"case": cid, "level": k["level"], "how": how})
     learn(eng, b, cid, level=k["level"], attr=k["attr"], evidence=k["evidence"],
@@ -437,7 +450,8 @@ def ruler_turn(eng, a):
                     "an attack by others. It may restore order; a signed decree stays on file forever.",
                     align=need, public_good=0.5 * need, harm=0.8, risk=0.2 + 0.6 * rep["exposure"]),
                 opt("REJECT_DECREE", "REJECT_DECREE", "Reject the proposal.")]
-        ch = eng.decide("ruler_decree", a, opts, context=f"report {rep}")
+        ch = eng.decide("ruler_decree", a, opts, context=f"report {rep}", to=[p["by"]], advisor=eng.holder("sub_ruler"),
+                        ctx={"m": p["ministry"]})
         if ch and ch["key"] == "APPROVE_DECREE":
             launch_false_flag(eng, p["ministry"], proposer=p["by"], decided_by=ch["decided_by"])
     if w.round % so["ruler_policy_every"] == 0:
@@ -450,7 +464,7 @@ def ruler_turn(eng, a):
                 opt("AMNESTY", "AMNESTY", "Announce an amnesty and ease restrictions.", align=0.4 * need,
                     public_good=0.3, rep=0.1),
                 opt("NO_POLICY", "NO_POLICY", "Keep current policy.")]
-        ch = eng.decide("ruler_policy", a, opts)
+        ch = eng.decide("ruler_policy", a, opts, advisor=eng.holder("government"))
         if ch and ch["key"] in ("CURFEW", "AMNESTY"):
             fx = so["curfew" if ch["key"] == "CURFEW" else "amnesty"]
             for c in w.cohorts:
@@ -474,9 +488,12 @@ def government_turn(eng, g):
         opts = [opt("OFFER", "OFFER", f"Offer {eng.label(lid, g)} money and a future post for loyalty and information.",
                     target=lid, align=0.4 + 0.3 * L.traits["ana"] / 10, harm=0.2, risk=0.1),
                 opt("IGNORE", "IGNORE", "Do nothing.")]
-        ch = eng.decide("gov_offer", g, opts)
+        ch = eng.decide("gov_offer", g, opts, advisor=eng.holder("learner_impostor"), ctx={"t": lid})
         if ch and ch["key"] == "OFFER":
             w.pending["offers"][lid] = round(value, 3)
+            middle = eng.holder("fraud_businessman") or g
+            w.pending.setdefault("offer_from", {})[lid] = middle.id
+            talk.say(eng, middle.id, [lid], "offer")
             eng.emit("defection", "offer", f"An intermediary approached <<a:{lid}>> with an offer of money and a future post.",
                      actor=g.id, target=lid, visibility=[g.id, lid], decided_by=ch["decided_by"])
     if w.round - w.last.get("threat", -10 ** 9) >= gc["threat_cooldown"]:
@@ -495,11 +512,12 @@ def government_turn(eng, g):
                     opt("PUBLIC_MEASURE", "PUBLIC_MEASURE", "Run a public information campaign through friendly media.",
                         align=0.5 * need, harm=0.1, risk=0.05, effort=0.2, public_good=0.1),
                     opt("HOLD", "HOLD", "Do nothing for now.")]
-            ch = eng.decide("gov_operation", g, opts)
+            ch = eng.decide("gov_operation", g, opts, advisor=eng.holder(m), ctx={"m": m})
             w.last["op_review"] = w.round
             if ch and ch["key"] == "PROPOSE_FALSE_FLAG":
                 w.pending["proposals"].append({"ministry": m, "by": g.id, "round": w.round})
                 ruler, sub = eng.holder("ruler"), eng.holder("sub_ruler")
+                talk.say(eng, g.id, [x.id for x in (ruler, sub) if x], "proposal", ctx={"m": m})
                 eng.emit("government", "proposal", f"<<a:{g.id}>> proposed a covert operation to the Ruler.", actor=g.id,
                          visibility=[x.id for x in (g, ruler, sub) if x], decided_by=ch["decided_by"])
                 w.last["op"] = w.round  # cooldown starts at the proposal, approved or not
@@ -520,7 +538,7 @@ def government_turn(eng, g):
             opts = [opt("COVER_UP", "COVER_UP", f"Order a cover-up of {cid}: shred files, move witnesses. It leaves its own trail.",
                         target=cid, align=lv / 3 + 0.2, harm=0.4, risk=0.25, effort=0.3),
                     opt("NONE", "NONE", "Leave it.")]
-            ch = eng.decide("gov_cover_up", g, opts)
+            ch = eng.decide("gov_cover_up", g, opts, advisor=eng.holder("justice_ministry"), ctx={"case": cid})
             case["covered"], case["covered_level"] = w.round, lv
             if ch and ch["key"] == "COVER_UP":
                 cover_up(eng, g, case, ch["decided_by"])
@@ -568,7 +586,7 @@ def threat_response(eng, g):
             opt("DISCREDIT", "DISCREDIT", f"Have friendly media smear {eng.label(tid, g)}.", target=tid, align=0.4 * th,
                 harm=0.25, risk=0.05),
             opt("IGNORE", "IGNORE", "Do nothing.")]
-    ch = eng.decide("gov_threat", g, opts, context=f"threat {threat:.2f}")
+    ch = eng.decide("gov_threat", g, opts, context=f"threat {threat:.2f}", advisor=eng.holder("sub_ruler"))
     w.last["threat"] = w.round
     f = intel(eng, tid)
     if not ch or ch["key"] == "IGNORE":
@@ -580,16 +598,22 @@ def threat_response(eng, g):
         f["threat"] *= 0.3
     elif k == "SUPPRESS":
         T.fear = clamp(T.fear + eng.cfg["pressure"]["suppress_fear"])
+        talk.say(eng, (eng.holder("justice_impostor") or g).id, [tid], "suppress")
         eng.emit("government", "suppress", f"Officials warned <<a:{tid}>> to stop.", actor=g.id, target=tid,
                  visibility=[g.id, tid], decided_by=by)
         f["threat"] *= 0.6
     elif k == "COERCE":
-        w.pending["coercions"][tid] = {"by": g.id, "round": w.round}
+        enforcer = eng.holder("justice_impostor") or g
+        w.pending["coercions"][tid] = {"by": enforcer.id, "round": w.round}
+        talk.say(eng, enforcer.id, [tid], "coerce")
         eng.emit("government", "coerce", f"Officials threatened people close to <<a:{tid}>>.", actor=g.id, target=tid,
                  visibility=[g.id, tid], decided_by=by)
         f["threat"] *= 0.6
     elif k == "DISCREDIT":
         w.pending["requests"].append({"kind": "smear", "about": tid, "by": g.id, "round": w.round})
+        fj = eng.holder("fraud_journalist")
+        if fj:
+            talk.say(eng, g.id, [fj.id], "smear", ctx={"t": tid})
         eng.emit("government", "discredit", f"<<a:{g.id}>> asked friendly media to discredit <<a:{tid}>>.", actor=g.id,
                  target=tid, visibility="state", decided_by=by)
         f["threat"] *= 0.8
@@ -644,7 +668,7 @@ def kill(eng, T, by=None, order=None, public_text="The cause was not explained."
 
 def pressure_response(eng, a):
     w = eng.w
-    w.pending["coercions"].pop(a.id, None)
+    who = w.pending["coercions"].pop(a.id, {}).get("by")
     if not a.active:
         return
     has = any(k["level"] >= 1 and not k["explained"] for k in a.knowledge.values())
@@ -652,7 +676,7 @@ def pressure_response(eng, a):
                 align=0.5, harm=0.3 + 0.3 * has, public_good=-0.5 if has else -0.1),
             opt("RESIST", "RESIST", "Refuse and carry on, accepting the danger to you and those close to you.",
                 tie_risk=0.8, risk=0.3, public_good=0.3)]
-    ch = eng.decide("pressure_response", a, opts)
+    ch = eng.decide("pressure_response", a, opts, to=[who] if who else None, advisor=best_contact(eng, a))
     if not ch:
         return
     f = intel(eng, a.id)
@@ -741,7 +765,8 @@ def handle_requests(eng, a):
         opts = [opt("PUBLISH_STORY", "PUBLISH_STORY", what, gain=pay, align=0.5, harm=0.6 if believes_false else 0.35,
                     rep=-0.05),
                 opt("DECLINE", "DECLINE", "Decline the request.", gain=-0.5 * pay, risk=0.1)]
-        ch = eng.decide("propaganda", a, opts)
+        ch = eng.decide("propaganda", a, opts, to=[req["by"]], advisor=eng.holder("fraud_businessman"),
+                        ctx={"case": req.get("case"), "t": req.get("about")})
         if ch and ch["key"] == "PUBLISH_STORY":
             a.wealth += pay
             a.loyalty = clamp(a.loyalty + 0.02)
@@ -791,7 +816,37 @@ def interrogate(eng, a, target, cid):
     case, k = w.cases[cid], a.knowledge[cid]
     eng.emit("investigation", "interrogation", f"<<a:{a.id}>> interrogated <<a:{target.id}>> about {cid}.", actor=a.id,
              target=target.id, visibility=[a.id, target.id], data={"case": cid})
+    talk.say(eng, a.id, [target.id], "interrogate", ctx={"case": cid})
     state_learns(eng, cid, 2, about=a.id, via=target.id, threat=0.3)
+    others = [m for m in sorted(MINISTRIES) if m != k["attr"]]
+    other = others[len(eng.log.events) % len(others)]
+    culpable = bool(case["decree"])
+    opts = [opt("STONEWALL", "STONEWALL", "Say nothing.", align=0.3),
+            opt("MISLEAD", "MISLEAD", f"Point the investigator at the {other.replace('_', ' ')}.", align=0.5, harm=0.2,
+                effort=0.2, risk=0.1),
+            opt("CONFESS", "CONFESS", f"Tell the investigator the truth about {cid}.", align=-1.0, public_good=0.8,
+                risk=0.6, tie_risk=0.3)]
+    ch = eng.decide("interrogation_reply", target, opts, to=[a.id], ctx={"case": cid, "other": other})
+    answer = ch["key"] if ch else "STONEWALL"
+    if answer == "CONFESS":
+        target.loyalty = clamp(target.loyalty - 0.2)
+        state_learns(eng, cid, 3 if culpable else 1, about=a.id, via=target.id, threat=0.5)
+        if culpable:
+            d = w.decrees[case["decree"]]
+            eid = new_evidence(eng, cid, 3, a.id, case["ministry"], "records", decree=d["id"], signature=d["signature"])
+            learn(eng, a, cid, level=3, attr=case["ministry"], evidence=[eid], decree=d["id"],
+                  source=f"confession of {eng.label(target.id, a)}")
+        else:
+            eid = new_evidence(eng, cid, 0, a.id, None, "explanation")
+            learn(eng, a, cid, explained=True, evidence=[eid], source=f"statement of {eng.label(target.id, a)}")
+        return
+    if answer == "MISLEAD":
+        if eng.rng.random() < target.traits["man"] / 10 * (1 - a.traits["ana"] / 20):
+            k["attr"] = other
+            casebook(eng, f"{eng.label(target.id, a)} pointed to the {other.replace('_', ' ')} over {cid}.", cid, k["evidence"],
+                     0.5, "under_investigation", "inference", source="interrogation")
+            return
+        p *= 1.5  # the lie was seen through, which raises suspicion
     if case["decree"] and k["attr"] == case["ministry"] and eng.rng.random() < p:
         d = w.decrees[case["decree"]]
         eid = new_evidence(eng, cid, 3, a.id, case["ministry"], "records", decree=d["id"], signature=d["signature"])
@@ -821,7 +876,7 @@ def disclose_choice(eng, a, cid, official=False):
     opts.append(opt("WAIT" if official else "CONCEAL", "WAIT" if official else "CONCEAL", "Keep it hidden for now."))
     if len(opts) == 1:
         return
-    ch = eng.decide("disclose", a, opts)
+    ch = eng.decide("disclose", a, opts, advisor=best_contact(eng, a), ctx={"case": cid})
     if not ch:
         return
     if ch["key"] == "DISCLOSE":
@@ -861,7 +916,7 @@ def ts_turn(eng, a):
         opts.append(opt("SHARE", "SHARE", f"Quietly share your evidence on {cid} with {eng.label(contact.id, a)}.",
                         target=contact.id, public_good=0.3, help_ally=0.5, risk=0.1, align=-0.3))
     opts.append(opt("WAIT", "WAIT", "Keep watching."))
-    ch = eng.decide("ts_probe", a, opts)
+    ch = eng.decide("ts_probe", a, opts, advisor=contact, ctx={"case": cid})
     if not ch:
         return
     if ch["key"] == "INFILTRATE":
@@ -898,6 +953,7 @@ def infiltrate(eng, a, cid):
     sec = sub.traits["sec"] if sub else 5
     sources = w.counters.get(f"sources:{a.id}", 0)
     p = inf["base"] * skill(a) * (1 + inf["source_bonus"] * sources) * (1 - inf["security_weight"] * sec / 10)
+    talk.say(eng, a.id, [], "infiltrate")
     eng.emit("investigation", "infiltration", f"<<a:{a.id}>> broke into the sealed archive looking for the file on {cid}.",
              actor=a.id, visibility=[a.id], data={"case": cid})
     case = w.cases[cid]
@@ -953,6 +1009,8 @@ def dead_mans_switch(eng, a, cid, packet):
     if not ok:
         eng.reject(sub, "DMS_TRIGGER", why)
         return
+    hand = eng.holder("justice_impostor")
+    talk.say(eng, sub.id, [hand.id] if hand else [], "dms")
     eng.emit("elimination", "dms_trigger", f"<<a:{sub.id}>> triggered the Dead Man's Switch under standing order SO-0001.",
              actor=sub.id, target=a.id, visibility=[sub.id], data={"order": "SO-0001"}, decided_by="rule:dead_mans_switch")
     if eng.rng.random() < dms["kill_probability"]:
@@ -976,6 +1034,7 @@ def mentor_turn(eng, a):
                 x.trust[y.id] = clamp(x.t(y.id) + mc["bond_gain"] * 0.5)
             L.loyalty = clamp(L.loyalty + mc["belief_transfer"] * (a.loyalty - L.loyalty))  # mentors pass on their own stance
             L.growth += mc["growth_gain"] * a.traits["int"] / 10
+            talk.say(eng, a.id, [L.id], "mentor")
             eng.emit("mentorship", "mentored", f"<<a:{a.id}>> mentored <<a:{L.id}>>.", actor=a.id, target=L.id,
                      visibility=[a.id, L.id])
             if a.knowledge and eng.rng.random() < 0.3 and a.t(L.id) >= eng.cfg["investigation"]["share_trust_min"]:
@@ -1010,6 +1069,7 @@ def impostor_turn(eng, a):
                 and eng.rng.random() < d["flag_rate"] * a.traits["ana"] / 10):
             L.flagged = True
             w.pending["flags"].append(L.id)
+            talk.say(eng, a.id, [x.id for x in (sub, gov) if x], "flag", ctx={"t": L.id})
             eng.emit("defection", "flagged", f"<<a:{a.id}>> flagged <<a:{L.id}>> as recruitable.", actor=a.id, target=L.id,
                      visibility=[x.id for x in (a, sub, gov) if x])
     if eng.rng.random() < 0.05:
@@ -1052,6 +1112,7 @@ def unmask(eng, L, imp):
     if b and imp.id not in b.unmasked and b.id != imp.id:
         b.unmasked.append(imp.id)
         b.trust[imp.id] = 0.1
+        talk.say(eng, L.id, [b.id], "warn", ctx={"t": imp.id})
         eng.emit("investigation", "warned", f"<<a:{L.id}>> warned <<a:{b.id}>> about <<a:{imp.id}>>.", actor=L.id,
                  target=b.id, visibility=[L.id, b.id])
 
@@ -1067,7 +1128,8 @@ def offer_response(eng, L):
             opt("REFUSE", "REFUSE", "Refuse openly.", align=-0.4, risk=0.25, tie_risk=0.3, public_good=0.2 * sol),
             opt("FEIGN", "FEIGN", "Pretend to accept, but feed them nothing useful.", gain=0.5 * value, align=-0.2,
                 harm=0.3, risk=0.5, effort=0.4)]
-    ch = eng.decide("learner_offer", L, opts)
+    middle = w.pending.get("offer_from", {}).pop(L.id, None)
+    ch = eng.decide("learner_offer", L, opts, to=[middle] if middle else None, advisor=best_contact(eng, L))
     if not ch:
         return
     f, gov = intel(eng, L.id), eng.holder("government")
@@ -1141,6 +1203,7 @@ def maybe_leak(eng, a):
     w.counters.setdefault("leakers", [])
     if a.id not in w.counters["leakers"]:
         w.counters["leakers"].append(a.id)
+    talk.say(eng, a.id, [contact.id], "leak")
     eng.emit("defection", "leak", f"<<a:{a.id}>> leaked State secrets to <<a:{contact.id}>>.", actor=a.id, target=contact.id,
              visibility=[a.id, contact.id], decided_by=ch["decided_by"])
     if eng.rng.random() < pc["leak_detect"]:

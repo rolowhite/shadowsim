@@ -9,7 +9,7 @@ Events (applied in order, all logged with decided_by="scenario_setup"):
 
 validate() is the trust boundary: it runs before a run is created and rejects anything it can't apply.
 """
-from . import mechanics
+from . import mechanics, talk
 from .events import sign
 from .state import TRAITS, make_agent
 
@@ -220,7 +220,6 @@ def _knows(eng, ev, cases):
     a, cid = w.agents[ev["agent"]], cases[ev["case"]]
     case, lvl = w.cases[cid], LEVELS[ev["level"]]
     if ev.get("note"):
-        eng.emit("investigation", "backstory_knowledge", f"<<a:{a.id}>>: {ev['note']}", actor=a.id, visibility=[a.id],
-                 data={"case": cid}, decided_by="scenario_setup")
+        talk.line(eng, a.id, [], "thought", ev["note"])
     mechanics.learn(eng, a, cid, level=lvl, attr=case["ministry"] if lvl >= 2 else None,
                     decree=case["decree"] if lvl == 3 else None, source="backstory")

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shadow City Story Chat</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="chat-page">
+<header class="bar">
+  <h1>Shadow City · Story Chat</h1>
+  <div class="meta" id="meta"><span class="muted">Loading…</span></div>
+  <div class="spacer"></div>
+  <a class="btn" id="controlLink" href="/control">Control Room</a>
+</header>
+<div class="omni-banner" role="note">Operator view: this window includes <b>private conversations</b> no other character heard. Lines marked <span class="badge b-muted">scripted</span> are templates rendered from what the agent decided; <span class="badge b-ok">LLM</span> lines were written by the model.</div>
+<div class="chat-filters">
+  <label><input type="checkbox" id="fPrivate" checked> private talk</label>
+  <label><input type="checkbox" id="fPublic" checked> public statements &amp; reports</label>
+  <label><input type="checkbox" id="fNarr" checked> narration</label>
+  <label><input type="checkbox" id="fMentor"> mentoring chatter</label>
+  <label>Person <select id="fWho"><option value="">anyone</option></select></label>
+  <label>Search <input id="fText" type="search" placeholder="words, case id…"></label>
+  <label>Rounds <input id="fFrom" type="number" placeholder="from" style="width:76px"> – <input id="fTo" type="number" placeholder="to" style="width:76px"></label>
+  <span class="muted" id="count"></span>
+</div>
+<main class="chat" id="chat" aria-live="polite"></main>
+<button id="toBottom" class="primary jump" hidden>↓ Latest</button>
+<script src="/static/common.js"></script>
+<script src="/static/chat.js"></script>
+</body>
+</html>

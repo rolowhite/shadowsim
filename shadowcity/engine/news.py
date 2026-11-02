@@ -139,6 +139,8 @@ def public_verification(eng, claim, re_expose=True):
         if case["kind"] == "family_secret":
             from . import succession
             succession.mark_crisis(eng, f"dynastic claim disputed: {case['description']}")
+        from . import outcomes
+        outcomes.detain_implicated(eng)  # only acts once control has changed
         for other in w.claims.values():
             if other["case"] != case["id"] or other["id"] == claim["id"]:
                 continue

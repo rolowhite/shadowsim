@@ -9,7 +9,7 @@ import pickle
 import random
 import re
 
-from . import access, actions, mechanics, news, outcomes, scenario, succession
+from . import access, actions, mechanics, news, outcomes, scenario, succession, talk
 from .events import EventLog
 from .state import World, VISIBLE, LEARNER
 
@@ -30,6 +30,7 @@ def utility(a, f, w):
             + w["info"] * f.get("info", 0) * t["cur"] / 10
             + w["reputation"] * f.get("rep", 0)
             + w["ally"] * f.get("help_ally", 0)
+            + w["advice"] * f.get("advised", 0)
             - w["effort"] * f.get("effort", 0) * (0.3 + a.burnout))
 
 
@@ -52,6 +53,7 @@ class Engine:
         self.decision_seq = 0
         self.stopped = False
         self.final = None
+        self.verdict = []
         self.w = World(cfg, self.rng)
         self.role_names = {e["role"]: e["name"] for e in cfg["roster"]}
         self.role_names.update({"learner": "Learner", "heir": "Ruler's Heir", "citizen": "Citizen"})
@@ -128,13 +130,13 @@ class Engine:
         return out
 
     # ---------- decisions ----------
-    def decide(self, kind, agent, options, context=""):
+    def _choose(self, kind, agent, options, context="", listener=None):
         wts, sd = self.cfg["utility"]["weights"], self.cfg["utility"]["noise_sd"]
         for o in options:  # noise is drawn here so every decider consumes the RNG identically
             o["score"] = round(utility(agent, o.get("features", {}), wts) + self.rng.gauss(0, sd), 6)
         self.decision_seq += 1
         req = {"seq": self.decision_seq, "kind": kind, "agent": agent.id, "round": self.w.round,
-               "options": options, "context": context}
+               "options": options, "context": context, "listener": listener}
         res = fallback_choice(req) if self.decider is None else self.decider.decide(req, self)
         chosen = next((o for o in options if o["key"] == res["key"]), None)
         if chosen is None:  # deciders must return a listed key; never trust them blindly
@@ -143,15 +145,35 @@ class Engine:
         by = res["decided_by"]
         c = self.w.counters
         c["decided_by:" + by] = c.get("decided_by:" + by, 0) + 1
+        data = {"kind": kind, "seq": req["seq"], "chosen": chosen["key"], "reason": res.get("reason", ""),
+                "scores": {o["key"]: o["score"] for o in options}, "llm_call": res.get("llm_call")}
+        if res.get("say"):
+            data["say"] = res["say"]
         self.emit("decision", kind, f"<<a:{agent.id}>> chose {chosen['key']} ({kind})", actor=agent.id,
-                  target=chosen.get("target"), visibility="omniscient", decided_by=by,
-                  data={"kind": kind, "seq": req["seq"], "chosen": chosen["key"], "reason": res.get("reason", ""),
-                        "scores": {o["key"]: o["score"] for o in options}, "llm_call": res.get("llm_call")})
+                  target=chosen.get("target"), visibility="omniscient", decided_by=by, data=data)
+        return res, chosen
+
+    def decide(self, kind, agent, options, context="", to=None, advisor=None, ctx=None):
+        """Optional advice first: the advisor runs the same options through their own utility and says it;
+        the advised option gets a bonus scaled by the decider's trust in the advisor and the advisor's Man."""
+        advised = None
+        if advisor is not None and advisor.id != agent.id and advisor.status == "active":
+            adv_opts = [dict(o, features=dict(o.get("features", {}))) for o in options]
+            a_res, a_ch = self._choose("advise_" + kind, advisor, adv_opts, context, listener=agent.id)
+            advised = a_ch["key"]
+            talk.advice(self, advisor, agent, kind, a_ch, a_res.get("say"), ctx)
+            bonus = round(agent.t(advisor.id) * (0.5 + 0.5 * advisor.traits["man"] / 10), 4)
+            for o in options:
+                if o["key"] == advised:
+                    o["features"] = dict(o.get("features", {}), advised=bonus)
+        listeners = [x for x in ([advisor.id] if advised else []) + list(to or []) if x]
+        res, chosen = self._choose(kind, agent, options, context, listener=listeners[0] if listeners else None)
+        talk.reply(self, agent, listeners, kind, chosen, res.get("say"), ctx, advised_key=advised)
         ok, why = actions.validate(agent, chosen["action"], self.w.regime)
         if not ok:
             self.reject(agent, chosen["action"], why)
             return None
-        return dict(chosen, decided_by=by)
+        return dict(chosen, decided_by=res["decided_by"])
 
     # ---------- loop ----------
     @property

@@ -25,7 +25,7 @@ CATALOGUE = {
                 "CONCEAL"},
 }
 # Responses to pressure and the choice to leak or stay quiet are open to every person, State or not.
-COMMON = {"COMPLY", "RESIST", "LEAK", "STAY"}
+COMMON = {"COMPLY", "RESIST", "LEAK", "STAY", "STONEWALL", "MISLEAD", "CONFESS"}
 COERCIVE = {"ELIMINATE", "SUPPRESS", "COERCE", "PROPOSE_FALSE_FLAG", "APPROVE_DECREE", "COVER_UP",
             "DMS_TRIGGER", "CURFEW", "EXECUTE_ORDER", "OFFER"}
 FORBIDDEN = {"DELETE_PACKET", "DELETE_TRACE", "ERASE_DECREE", "EDIT_DECREE"}
